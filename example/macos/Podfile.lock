@@ -14,9 +14,9 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral
 
 SPEC CHECKSUMS:
-  cupertino_native: 1e6e510e1e54c6a6c048937f5527cc46c43f28a6
+  cupertino_native: 69ee8a8bac1c467f04256be9d78899a180287d9a
   FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
 
 PODFILE CHECKSUM: 346bfb2deb41d4a6ebd6f6799f92188bde2d246f
 
-COCOAPODS: 1.15.2
+COCOAPODS: 1.16.2
