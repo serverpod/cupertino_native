@@ -8,13 +8,16 @@ import '../style/sf_symbol.dart';
 /// Immutable data describing a single tab bar item.
 class CNTabBarItem {
   /// Creates a tab bar item description.
-  const CNTabBarItem({this.label, this.icon});
+  const CNTabBarItem({this.label, this.icon, this.badge});
 
   /// Optional tab item label.
   final String? label;
 
   /// Optional SF Symbol for the item.
   final CNSymbol? icon;
+
+  /// Optional badge value to display on the item (iOS only).
+  final String? badge;
 }
 
 /// A Cupertino-native tab bar. Uses native UITabBar/NSTabView style visuals.
@@ -133,12 +136,14 @@ class _CNTabBarState extends State<CNTabBar> {
     final colors = widget.items
         .map((e) => resolveColorToArgb(e.icon?.color, context))
         .toList();
+    final badges = widget.items.map((e) => e.badge ?? '').toList();
 
     final creationParams = <String, dynamic>{
       'labels': labels,
       'sfSymbols': symbols,
       'sfSymbolSizes': sizes,
       'sfSymbolColors': colors,
+      'badges': badges,
       'selectedIndex': widget.currentIndex,
       'isDark': _isDark,
       'split': widget.split,
@@ -232,11 +237,13 @@ class _CNTabBarState extends State<CNTabBar> {
     // Items update (for hot reload or dynamic changes)
     final labels = widget.items.map((e) => e.label ?? '').toList();
     final symbols = widget.items.map((e) => e.icon?.name ?? '').toList();
+    final badges = widget.items.map((e) => e.badge ?? '').toList();
     if (_lastLabels?.join('|') != labels.join('|') ||
         _lastSymbols?.join('|') != symbols.join('|')) {
       await ch.invokeMethod('setItems', {
         'labels': labels,
         'sfSymbols': symbols,
+        'badges': badges,
         'selectedIndex': widget.currentIndex,
       });
       _lastLabels = labels;

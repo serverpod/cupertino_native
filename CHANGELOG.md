@@ -1,3 +1,7 @@
+## 0.1.2
+
+* Adds tab bar badges on iOS (`badge`).
+
 ## 0.1.1
 
 * Adds link to blog post in readme.

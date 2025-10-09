@@ -31,6 +31,7 @@ class CupertinoTabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelega
     var rightCount: Int = 1
     var leftInset: CGFloat = 0
     var rightInset: CGFloat = 0
+    var badges: [String] = []
 
     if let dict = args as? [String: Any] {
       labels = (dict["labels"] as? [String]) ?? []
@@ -46,6 +47,7 @@ class CupertinoTabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelega
       if let s = dict["split"] as? NSNumber { split = s.boolValue }
       if let rc = dict["rightCount"] as? NSNumber { rightCount = rc.intValue }
       if let sp = dict["splitSpacing"] as? NSNumber { splitSpacingVal = CGFloat(truncating: sp) }
+      if let b = dict["badges"] as? [String] { badges = b }
       // content insets controlled by Flutter padding; keep zero here
     }
 
@@ -64,7 +66,13 @@ class CupertinoTabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelega
         var image: UIImage? = nil
         if i < symbols.count { image = UIImage(systemName: symbols[i]) }
         let title = (i < labels.count) ? labels[i] : nil
-        items.append(UITabBarItem(title: title, image: image, selectedImage: image))
+        let item = UITabBarItem(title: title, image: image, selectedImage: image)
+        if i < badges.count {
+          let val = badges[i]
+          item.badgeValue = val.isEmpty ? nil : val
+        }
+        
+        items.append(item)
       }
       return items
     }
@@ -164,6 +172,7 @@ channel.setMethodCallHandler { [weak self] call, result in
         if let args = call.arguments as? [String: Any] {
           let labels = (args["labels"] as? [String]) ?? []
           let symbols = (args["sfSymbols"] as? [String]) ?? []
+          let badges = (args["badges"] as? [String]) ?? []
           let selectedIndex = (args["selectedIndex"] as? NSNumber)?.intValue ?? 0
           self.currentLabels = labels
           self.currentSymbols = symbols
@@ -173,7 +182,13 @@ channel.setMethodCallHandler { [weak self] call, result in
               var image: UIImage? = nil
               if i < symbols.count { image = UIImage(systemName: symbols[i]) }
               let title = (i < labels.count) ? labels[i] : nil
-              items.append(UITabBarItem(title: title, image: image, selectedImage: image))
+              let item = UITabBarItem(title: title, image: image, selectedImage: image)
+              if i < badges.count {
+                let val = badges[i]
+                item.badgeValue = val.isEmpty ? nil : val
+              }
+              
+              items.append(item)
             }
             return items
           }
@@ -211,6 +226,7 @@ channel.setMethodCallHandler { [weak self] call, result in
           self.tabBarRight?.removeFromSuperview(); self.tabBarRight = nil
           let labels = self.currentLabels
           let symbols = self.currentSymbols
+          let badges: [String] = []
           let appearance: UITabBarAppearance? = {
             if #available(iOS 13.0, *) { let ap = UITabBarAppearance(); ap.configureWithDefaultBackground(); return ap }
             return nil
@@ -221,7 +237,13 @@ channel.setMethodCallHandler { [weak self] call, result in
               var image: UIImage? = nil
               if i < symbols.count { image = UIImage(systemName: symbols[i]) }
               let title = (i < labels.count) ? labels[i] : nil
-              items.append(UITabBarItem(title: title, image: image, selectedImage: image))
+              let item = UITabBarItem(title: title, image: image, selectedImage: image)
+              if i < badges.count {
+                let val = badges[i]
+                item.badgeValue = val.isEmpty ? nil : val
+              }
+              
+              items.append(item)
             }
             return items
           }
