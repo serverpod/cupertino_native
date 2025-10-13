@@ -74,7 +74,7 @@ class CupertinoTabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelega
         } else if i < symbols.count && !symbols[i].isEmpty {
           image = UIImage(systemName: symbols[i])
         }
-        let title = (i < labels.count) ? labels[i] : nil
+        let title = (i < labels.count && !labels[i].isEmpty) ? labels[i] : nil
         let item = UITabBarItem(title: title, image: image, selectedImage: image)
         if i < badges.count && !badges[i].isEmpty {
           item.badgeValue = badges[i]
@@ -198,7 +198,7 @@ channel.setMethodCallHandler { [weak self] call, result in
               } else if i < symbols.count && !symbols[i].isEmpty {
                 image = UIImage(systemName: symbols[i])
               }
-              let title = (i < labels.count) ? labels[i] : nil
+              let title = (i < labels.count && !labels[i].isEmpty) ? labels[i] : nil
               let item = UITabBarItem(title: title, image: image, selectedImage: image)
               if i < badges.count && !badges[i].isEmpty {
                 item.badgeValue = badges[i]
@@ -257,7 +257,7 @@ channel.setMethodCallHandler { [weak self] call, result in
               } else if i < symbols.count && !symbols[i].isEmpty {
                 image = UIImage(systemName: symbols[i])
               }
-              let title = (i < labels.count) ? labels[i] : nil
+              let title = (i < labels.count && !labels[i].isEmpty) ? labels[i] : nil
               let item = UITabBarItem(title: title, image: image, selectedImage: image)
               if i < badges.count && !badges[i].isEmpty {
                 item.badgeValue = badges[i]
