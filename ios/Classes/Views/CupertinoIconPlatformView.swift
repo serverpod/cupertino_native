@@ -7,7 +7,8 @@ class CupertinoIconPlatformView: NSObject, FlutterPlatformView {
   private let imageView: UIImageView
 
   private var name: String = ""
-  private var customIconAsset: String?
+  private var customIconBytes: Data?
+  private var iconScale: CGFloat = UIScreen.main.scale
   private var isDark: Bool = false
   private var size: CGFloat?
   private var color: UIColor?
@@ -22,7 +23,9 @@ class CupertinoIconPlatformView: NSObject, FlutterPlatformView {
 
     if let dict = args as? [String: Any] {
       if let s = dict["name"] as? String { self.name = s }
-      if let s = dict["customIconAsset"] as? String { self.customIconAsset = s }
+      if let data = dict["customIconBytes"] as? FlutterStandardTypedData {
+        self.customIconBytes = data.data
+      }
       if let b = dict["isDark"] as? NSNumber { self.isDark = b.boolValue }
       if let style = dict["style"] as? [String: Any] {
         if let v = style["iconSize"] as? NSNumber { self.size = CGFloat(truncating: v) }
@@ -94,9 +97,9 @@ class CupertinoIconPlatformView: NSObject, FlutterPlatformView {
 
   private func rebuild() {
     var img: UIImage? = nil
-    // Custom icon takes precedence over SF Symbol
-    if let asset = customIconAsset, !asset.isEmpty {
-      img = Self.loadFlutterAsset(asset)
+    // Custom icon bytes take precedence over SF Symbol
+    if let data = customIconBytes {
+      img = UIImage(data: data, scale: self.iconScale)?.withRenderingMode(.alwaysTemplate)
     } else {
       img = UIImage(systemName: name)
     }

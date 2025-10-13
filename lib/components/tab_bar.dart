@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import '../channel/params.dart';
 import '../style/sf_symbol.dart';
+import '../utils/icon_renderer.dart';
 
 /// Immutable data describing a single tab bar item.
 class CNTabBarItem {
@@ -11,26 +12,43 @@ class CNTabBarItem {
   const CNTabBarItem({
     this.label,
     this.icon,
+    this.activeIcon,
     this.badge,
-    this.customIconAsset,
+    this.customIcon,
+    this.activeCustomIcon,
   });
 
   /// Optional tab item label.
   final String? label;
 
-  /// Optional SF Symbol for the item.
-  /// If both [icon] and [customIconAsset] are provided, [customIconAsset] takes precedence.
+  /// Optional SF Symbol for the item (unselected state).
+  /// If both [icon] and [customIcon] are provided, [customIcon] takes precedence.
   final CNSymbol? icon;
+
+  /// Optional SF Symbol for the item when selected.
+  /// If not provided, [icon] is used for both states.
+  final CNSymbol? activeIcon;
 
   /// Optional badge text to display on the tab bar item.
   /// On iOS, this displays as a red badge with the text.
   /// On macOS, badges are not supported by NSSegmentedControl.
   final String? badge;
 
-  /// Optional custom icon asset path (e.g., 'assets/icons/home.png').
-  /// Supports PNG, JPG, and other image formats supported by the platform.
-  /// If provided, this takes precedence over [icon].
-  final String? customIconAsset;
+  /// Optional custom icon for unselected state.
+  /// Use icons from CupertinoIcons, Icons, or any custom IconData.
+  /// The icon will be rendered to an image at 25pt (iOS standard tab bar icon size)
+  /// and sent to the native platform. If provided, this takes precedence over [icon].
+  /// 
+  /// Examples:
+  /// ```dart
+  /// customIcon: CupertinoIcons.house
+  /// customIcon: Icons.home
+  /// ```
+  final IconData? customIcon;
+
+  /// Optional custom icon for selected state.
+  /// If not provided, [customIcon] is used for both states.
+  final IconData? activeCustomIcon;
 }
 
 /// A Cupertino-native tab bar. Uses native UITabBar/NSTabView style visuals.
@@ -97,8 +115,8 @@ class _CNTabBarState extends State<CNTabBar> {
   double? _intrinsicWidth;
   List<String>? _lastLabels;
   List<String>? _lastSymbols;
+  List<String>? _lastActiveSymbols;
   List<String>? _lastBadges;
-  List<String>? _lastCustomIconAssets;
   bool? _lastSplit;
   int? _lastRightCount;
   double? _lastSplitSpacing;
@@ -130,7 +148,9 @@ class _CNTabBarState extends State<CNTabBar> {
           items: [
             for (final item in widget.items)
               BottomNavigationBarItem(
-                icon: Icon(CupertinoIcons.circle),
+                icon: item.customIcon != null
+                    ? Icon(item.customIcon)
+                    : const Icon(CupertinoIcons.circle),
                 label: item.label,
               ),
           ],
@@ -143,10 +163,67 @@ class _CNTabBarState extends State<CNTabBar> {
       );
     }
 
+    // Render custom IconData to bytes
+    return FutureBuilder<List<List<Uint8List?>>>(
+      future: _renderCustomIcons(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          // Show placeholder while rendering
+          return SizedBox(
+            height: widget.height ?? 50,
+            width: double.infinity,
+          );
+        }
+
+        final iconBytes = snapshot.data!;
+        final customIconBytes = iconBytes[0];
+        final activeCustomIconBytes = iconBytes[1];
+
+        return _buildNativeTabBar(
+          context,
+          customIconBytes: customIconBytes,
+          activeCustomIconBytes: activeCustomIconBytes,
+        );
+      },
+    );
+  }
+
+  Future<List<List<Uint8List?>>> _renderCustomIcons() async {
+    final customIconBytes = <Uint8List?>[];
+    final activeCustomIconBytes = <Uint8List?>[];
+
+    for (final item in widget.items) {
+      // Render custom icon
+      if (item.customIcon != null) {
+        final bytes = await iconDataToImageBytes(item.customIcon!, size: 25.0);
+        customIconBytes.add(bytes);
+      } else {
+        customIconBytes.add(null);
+      }
+
+      // Render active custom icon
+      if (item.activeCustomIcon != null) {
+        final bytes = await iconDataToImageBytes(item.activeCustomIcon!, size: 25.0);
+        activeCustomIconBytes.add(bytes);
+      } else if (item.customIcon != null) {
+        activeCustomIconBytes.add(customIconBytes.last); // Use same as normal
+      } else {
+        activeCustomIconBytes.add(null);
+      }
+    }
+
+    return [customIconBytes, activeCustomIconBytes];
+  }
+
+  Widget _buildNativeTabBar(
+    BuildContext context, {
+    required List<Uint8List?> customIconBytes,
+    required List<Uint8List?> activeCustomIconBytes,
+  }) {
     final labels = widget.items.map((e) => e.label ?? '').toList();
     final symbols = widget.items.map((e) => e.icon?.name ?? '').toList();
+    final activeSymbols = widget.items.map((e) => e.activeIcon?.name ?? e.icon?.name ?? '').toList();
     final badges = widget.items.map((e) => e.badge ?? '').toList();
-    final customIconAssets = widget.items.map((e) => e.customIconAsset ?? '').toList();
     final sizes = widget.items
         .map((e) => (widget.iconSize ?? e.icon?.size))
         .toList();
@@ -157,8 +234,11 @@ class _CNTabBarState extends State<CNTabBar> {
     final creationParams = <String, dynamic>{
       'labels': labels,
       'sfSymbols': symbols,
+      'activeSfSymbols': activeSymbols,
       'badges': badges,
-      'customIconAssets': customIconAssets,
+      'customIconBytes': customIconBytes,
+      'activeCustomIconBytes': activeCustomIconBytes,
+      'iconScale': MediaQuery.of(context).devicePixelRatio, // Pass the scale!
       'sfSymbolSizes': sizes,
       'sfSymbolColors': colors,
       'selectedIndex': widget.currentIndex,
@@ -233,6 +313,8 @@ class _CNTabBarState extends State<CNTabBar> {
     final idx = widget.currentIndex;
     final tint = resolveColorToArgb(_effectiveTint, context);
     final bg = resolveColorToArgb(widget.backgroundColor, context);
+    final iconScale = MediaQuery.of(context).devicePixelRatio;
+    
     if (_lastIndex != idx) {
       await ch.invokeMethod('setSelectedIndex', {'index': idx});
       _lastIndex = idx;
@@ -254,23 +336,34 @@ class _CNTabBarState extends State<CNTabBar> {
     // Items update (for hot reload or dynamic changes)
     final labels = widget.items.map((e) => e.label ?? '').toList();
     final symbols = widget.items.map((e) => e.icon?.name ?? '').toList();
+    final activeSymbols = widget.items.map((e) => e.activeIcon?.name ?? e.icon?.name ?? '').toList();
     final badges = widget.items.map((e) => e.badge ?? '').toList();
-    final customIconAssets = widget.items.map((e) => e.customIconAsset ?? '').toList();
+    
+    // Check if basic properties changed
     if (_lastLabels?.join('|') != labels.join('|') ||
         _lastSymbols?.join('|') != symbols.join('|') ||
-        _lastBadges?.join('|') != badges.join('|') ||
-        _lastCustomIconAssets?.join('|') != customIconAssets.join('|')) {
+        _lastActiveSymbols?.join('|') != activeSymbols.join('|') ||
+        _lastBadges?.join('|') != badges.join('|')) {
+      
+      // Re-render custom icons if items changed
+      final iconBytes = await _renderCustomIcons();
+      final customIconBytes = iconBytes[0];
+      final activeCustomIconBytes = iconBytes[1];
+      
       await ch.invokeMethod('setItems', {
         'labels': labels,
         'sfSymbols': symbols,
+        'activeSfSymbols': activeSymbols,
         'badges': badges,
-        'customIconAssets': customIconAssets,
+        'customIconBytes': customIconBytes,
+        'activeCustomIconBytes': activeCustomIconBytes,
+        'iconScale': iconScale,
         'selectedIndex': widget.currentIndex,
       });
       _lastLabels = labels;
       _lastSymbols = symbols;
+      _lastActiveSymbols = activeSymbols;
       _lastBadges = badges;
-      _lastCustomIconAssets = customIconAssets;
       // Re-measure width in case content changed
       _requestIntrinsicSize();
     }
@@ -312,8 +405,9 @@ class _CNTabBarState extends State<CNTabBar> {
   void _cacheItems() {
     _lastLabels = widget.items.map((e) => e.label ?? '').toList();
     _lastSymbols = widget.items.map((e) => e.icon?.name ?? '').toList();
+    _lastActiveSymbols = widget.items.map((e) => e.activeIcon?.name ?? e.icon?.name ?? '').toList();
     _lastBadges = widget.items.map((e) => e.badge ?? '').toList();
-    _lastCustomIconAssets = widget.items.map((e) => e.customIconAsset ?? '').toList();
+    // Note: Custom icon bytes are cached in _syncPropsToNativeIfNeeded when rendered
   }
 
   Future<void> _requestIntrinsicSize() async {

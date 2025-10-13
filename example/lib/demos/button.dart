@@ -143,31 +143,31 @@ class _ButtonDemoPageState extends State<ButtonDemoPage> {
               children: [
                 CNButton.icon(
                   icon: const CNSymbol('house.fill', size: 18),
-                  customIconAsset: 'assets/icons/home.png',  // Custom PNG icon!
+                  customIcon: CupertinoIcons.home,  // Custom IconData!
                   style: CNButtonStyle.plain,
                   onPressed: () => _set('Custom Icon Plain'),
                 ),
                 CNButton.icon(
                   icon: const CNSymbol('house.fill', size: 18),
-                  customIconAsset: 'assets/icons/home.png',
+                  customIcon: CupertinoIcons.home,
                   style: CNButtonStyle.gray,
                   onPressed: () => _set('Custom Icon Gray'),
                 ),
                 CNButton.icon(
                   icon: const CNSymbol('house.fill', size: 18),
-                  customIconAsset: 'assets/icons/home.png',
+                  customIcon: CupertinoIcons.home,
                   style: CNButtonStyle.tinted,
                   onPressed: () => _set('Custom Icon Tinted'),
                 ),
                 CNButton.icon(
                   icon: const CNSymbol('house.fill', size: 18),
-                  customIconAsset: 'assets/icons/home.png',
+                  customIcon: CupertinoIcons.home,
                   style: CNButtonStyle.bordered,
                   onPressed: () => _set('Custom Icon Bordered'),
                 ),
                 CNButton.icon(
                   icon: const CNSymbol('house.fill', size: 18),
-                  customIconAsset: 'assets/icons/home.png',
+                  customIcon: CupertinoIcons.home,
                   style: CNButtonStyle.glass,
                   onPressed: () => _set('Custom Icon Glass'),
                 ),

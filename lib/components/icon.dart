@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import '../channel/params.dart';
 import '../style/sf_symbol.dart';
+import '../utils/icon_renderer.dart';
 
 /// A platform-rendered SF Symbol icon or custom image icon.
 ///
@@ -14,7 +15,7 @@ class CNIcon extends StatefulWidget {
   const CNIcon({
     super.key,
     required this.symbol,
-    this.customIconAsset,
+    this.customIcon,
     this.size,
     this.color,
     this.mode,
@@ -23,12 +24,12 @@ class CNIcon extends StatefulWidget {
   });
 
   /// The SF Symbol to render.
-  /// If both [symbol] and [customIconAsset] are provided, [customIconAsset] takes precedence.
+  /// If both [symbol] and [customIcon] are provided, [customIcon] takes precedence.
   final CNSymbol symbol;
 
-  /// Optional custom icon asset path (e.g., 'assets/icons/custom.png').
+  /// Optional custom icon from CupertinoIcons, Icons, or any IconData.
   /// If provided, this takes precedence over [symbol].
-  final String? customIconAsset;
+  final IconData? customIcon;
 
   /// Overrides the symbol's size.
   final double? size;
@@ -81,13 +82,30 @@ class _CNIconState extends State<CNIcon> {
 
   @override
   Widget build(BuildContext context) {
+    // Render custom icon if needed
+    if (widget.customIcon != null) {
+      final iconSize = widget.size ?? widget.symbol.size;
+      return FutureBuilder<Uint8List?>(
+        future: iconDataToImageBytes(widget.customIcon!, size: iconSize),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return SizedBox(width: iconSize, height: widget.height ?? iconSize);
+          }
+          return _buildNativeIcon(context, customIconBytes: snapshot.data);
+        },
+      );
+    }
+
+    return _buildNativeIcon(context, customIconBytes: null);
+  }
+
+  Widget _buildNativeIcon(BuildContext context, {Uint8List? customIconBytes}) {
     const viewType = 'CupertinoNativeIcon';
 
     final symbol = widget.symbol;
     final creationParams = <String, dynamic>{
       'name': symbol.name,
-      if (widget.customIconAsset != null)
-        'customIconAsset': widget.customIconAsset,
+      if (customIconBytes != null) 'customIconBytes': customIconBytes,
       'isDark': _isDark,
       'style': <String, dynamic>{
         'iconSize': (widget.size ?? symbol.size),
@@ -202,6 +220,4 @@ class _CNIconState extends State<CNIcon> {
       _lastIsDark = isDark;
     }
   }
-
-  // No intrinsic sizing API: platform view is wrapped with fixed constraints.
 }

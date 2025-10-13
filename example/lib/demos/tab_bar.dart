@@ -1,5 +1,5 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart' show TabController, TabBarView, Colors;
+import 'package:flutter/material.dart' show TabController, TabBarView, Colors, Icons;
 import 'package:cupertino_native/cupertino_native.dart';
 
 class TabBarDemoPage extends StatefulWidget {
@@ -54,24 +54,30 @@ class _TabBarDemoPageState extends State<TabBarDemoPage>
           Align(
             alignment: Alignment.bottomCenter,
             child: CNTabBar(
-              items: const [
+              items: [
                 CNTabBarItem(
                   label: 'Home',
-                  customIconAsset: 'assets/icons/home.png',  // Custom PNG icon
+                  // Custom IconData from CupertinoIcons
+                  customIcon: CupertinoIcons.house,
+                  activeCustomIcon: CupertinoIcons.house_fill,
                   badge: '3',
                 ),
                 CNTabBarItem(
                   label: 'Profile',
-                  icon: CNSymbol('person.crop.circle'),
+                  icon: CNSymbol('person.crop.circle'), // SF Symbol
+                  activeIcon: CNSymbol(
+                    'person.crop.circle.fill',
+                  ), // SF Symbol (filled)
                   badge: '12',
                 ),
                 CNTabBarItem(
                   label: 'Settings',
-                  icon: CNSymbol('gearshape.fill'),
+                  // Custom IconData from Icons (Material)
+                  customIcon: Icons.settings,
+                  activeCustomIcon: Icons.settings,
                 ),
                 CNTabBarItem(
-                  icon: CNSymbol('magnifyingglass'),
-                  badge: 'New',
+                  icon: CNSymbol('magnifyingglass'), // Icon-only (circular)
                 ),
               ],
               currentIndex: _index,

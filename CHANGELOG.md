@@ -1,15 +1,18 @@
 ## 0.2.0
 
 * **NEW:** Added badge support to tab bar items - display notification counts or text badges on tabs (iOS only)
-* **NEW:** Added custom icon support across all icon-supporting widgets (CNTabBar, CNButton, CNIcon, CNPopupMenuButton)
-* **NEW:** Added `iconColor` parameter to CNPopupMenuItem for tinting custom PNG/JPG icons
-* **ENHANCEMENT:** Use PNG, JPG, or other image assets alongside SF Symbols for any widget icon
+* **NEW:** Added custom icon support using `IconData` (e.g., `CupertinoIcons`, `Icons`, or any font-based icons)
+* **NEW:** Added `activeCustomIcon` to CNTabBarItem for displaying different icons when tab is selected
+* **NEW:** Added `iconColor` parameter to CNPopupMenuItem for tinting icons (both SF Symbols and custom icons)
+* **ENHANCEMENT:** Custom icons rendered from Flutter `IconData` at native resolution with proper scaling
+* **ENHANCEMENT:** Custom icons support native tinting/coloring on iOS and macOS
 * **ENHANCEMENT:** Custom icons take precedence over SF Symbols when both are provided
-* **ENHANCEMENT:** Custom icons in popup menus can be dynamically tinted with any color
-* Updated all examples to demonstrate badges, custom icons, and icon coloring
-* Added `customIconAsset` property to CNTabBarItem, CNButton.icon, CNIcon, CNPopupMenuItem, and CNPopupMenuButton.icon
-* Fixed nullable color handling in popup menu icons for proper SF Symbol coloring
-* Improved documentation with custom icon usage examples
+* Added `customIcon` property to CNTabBarItem, CNButton.icon, CNIcon, CNPopupMenuItem, and CNPopupMenuButton.icon
+* Added `activeCustomIcon` property to CNTabBarItem for selected state icons
+* Added shared `iconDataToImageBytes` utility for consistent icon rendering across all widgets
+* Updated all examples to demonstrate badges, custom icons, active icons, and icon coloring
+* Fixed icon rendering to use proper device pixel ratio for crisp native display
+* Improved split button rendering to be circular when no label is specified
 
 ## 0.1.1
 

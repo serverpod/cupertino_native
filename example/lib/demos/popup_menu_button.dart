@@ -56,8 +56,8 @@ class _PopupMenuButtonDemoPageState extends State<PopupMenuButtonDemoPage> {
     final customIconItems = [
       CNPopupMenuItem(
         label: 'Home',
-        customIconAsset: 'assets/icons/home.png',  // Custom PNG icon!
-        iconColor: CupertinoColors.systemBlue,  // Tint the custom PNG icon blue!
+        customIcon: CupertinoIcons.home,  // Custom IconData!
+        iconColor: CupertinoColors.systemBlue,  // Tint the custom icon blue!
       ),
       CNPopupMenuItem(
         label: 'Profile',
@@ -66,8 +66,8 @@ class _PopupMenuButtonDemoPageState extends State<PopupMenuButtonDemoPage> {
       const CNPopupMenuDivider(),
       CNPopupMenuItem(
         label: 'Settings',
-        customIconAsset: 'assets/icons/home.png',
-        iconColor: CupertinoColors.systemOrange,  // Same PNG icon, different color!
+        customIcon: CupertinoIcons.settings,
+        iconColor: CupertinoColors.systemOrange,  // Different icon with different color!
       ),
     ];
 
@@ -136,7 +136,7 @@ class _PopupMenuButtonDemoPageState extends State<PopupMenuButtonDemoPage> {
                 Spacer(),
                 CNPopupMenuButton.icon(
                   buttonIcon: const CNSymbol('ellipsis', size: 18),
-                  buttonCustomIconAsset: 'assets/icons/home.png',  // Custom PNG icon!
+                  buttonCustomIcon: CupertinoIcons.ellipsis_circle,  // Custom IconData!
                   size: 44,
                   items: customIconItems,
                   onSelected: (index) {

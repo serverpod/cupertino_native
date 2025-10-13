@@ -9,7 +9,7 @@ class CupertinoPopupMenuButtonPlatformView: NSObject, FlutterPlatformView {
   private var isRoundButton: Bool = false
   private var labels: [String] = []
   private var symbols: [String] = []
-  private var customIconAssets: [String] = []
+  private var customIconBytes: [Data?] = []
   private var customIconColors: [Any] = []
   private var dividers: [Bool] = []
   private var enabled: [Bool] = []
@@ -18,9 +18,10 @@ class CupertinoPopupMenuButtonPlatformView: NSObject, FlutterPlatformView {
   private var itemModes: [String?] = []
   private var itemPalettes: [[NSNumber]] = []
   private var itemGradients: [NSNumber?] = []
+  private var iconScale: CGFloat = UIScreen.main.scale
   // Track current button icon configuration to keep image across state updates
   private var btnIconName: String? = nil
-  private var btnCustomIconAsset: String? = nil
+  private var btnCustomIconBytes: Data? = nil
   private var btnIconSize: CGFloat? = nil
   private var btnIconColor: UIColor? = nil
   private var btnIconMode: String? = nil
@@ -33,7 +34,6 @@ class CupertinoPopupMenuButtonPlatformView: NSObject, FlutterPlatformView {
 
     var title: String? = nil
     var iconName: String? = nil
-    var customIconAsset: String? = nil
     var iconSize: CGFloat? = nil
     var iconColor: UIColor? = nil
     var makeRound: Bool = false
@@ -42,18 +42,22 @@ class CupertinoPopupMenuButtonPlatformView: NSObject, FlutterPlatformView {
     var buttonStyle: String = "automatic"
     var labels: [String] = []
     var symbols: [String] = []
-    var customIconAssets: [String] = []
+    var customIconBytes: [Data?] = []
     var customIconColors: [Any] = []
     var dividers: [NSNumber] = []
     var enabled: [NSNumber] = []
     var sizes: [Any] = []
     var colors: [Any] = []
+    var iconScale: CGFloat = UIScreen.main.scale
     var buttonIconMode: String? = nil
     var buttonIconPalette: [NSNumber] = []
+    var buttonCustomIconBytes: Data? = nil
 
     if let dict = args as? [String: Any] {
       if let t = dict["buttonTitle"] as? String { title = t }
-      if let s = dict["buttonCustomIconAsset"] as? String { customIconAsset = s }
+      if let data = dict["buttonCustomIconBytes"] as? FlutterStandardTypedData {
+        buttonCustomIconBytes = data.data
+      }
       if let s = dict["buttonIconName"] as? String { iconName = s }
       if let s = dict["buttonIconSize"] as? NSNumber { iconSize = CGFloat(truncating: s) }
       if let c = dict["buttonIconColor"] as? NSNumber { iconColor = Self.colorFromARGB(c.intValue) }
@@ -63,7 +67,9 @@ class CupertinoPopupMenuButtonPlatformView: NSObject, FlutterPlatformView {
       if let bs = dict["buttonStyle"] as? String { buttonStyle = bs }
       labels = (dict["labels"] as? [String]) ?? []
       symbols = (dict["sfSymbols"] as? [String]) ?? []
-      customIconAssets = (dict["customIconAssets"] as? [String]) ?? []
+      if let bytesArray = dict["customIconBytes"] as? [FlutterStandardTypedData?] {
+        customIconBytes = bytesArray.map { $0?.data }
+      }
       customIconColors = (dict["customIconColors"] as? [Any]) ?? []
       dividers = (dict["isDivider"] as? [NSNumber]) ?? []
       enabled = (dict["enabled"] as? [NSNumber]) ?? []
@@ -98,10 +104,11 @@ class CupertinoPopupMenuButtonPlatformView: NSObject, FlutterPlatformView {
     // Store
     self.labels = labels
     self.symbols = symbols
-    self.customIconAssets = customIconAssets
+    self.customIconBytes = customIconBytes
     self.customIconColors = customIconColors
     self.dividers = dividers.map { $0.boolValue }
     self.enabled = enabled.map { $0.boolValue }
+    self.iconScale = iconScale
 
     self.isRoundButton = makeRound
     applyButtonStyle(buttonStyle: buttonStyle, round: makeRound)
@@ -109,7 +116,7 @@ class CupertinoPopupMenuButtonPlatformView: NSObject, FlutterPlatformView {
     // Now set content (title/image) using configuration when available
     // Cache current icon props for state updates
     self.btnIconName = iconName
-    self.btnCustomIconAsset = customIconAsset
+    self.btnCustomIconBytes = buttonCustomIconBytes
     self.btnIconSize = iconSize
     self.btnIconColor = iconColor
     self.btnIconMode = buttonIconMode
@@ -244,15 +251,15 @@ class CupertinoPopupMenuButtonPlatformView: NSObject, FlutterPlatformView {
         if isDiv { flushGroup(); continue }
         let title = i < labels.count ? labels[i] : ""
         var image: UIImage? = nil
-        // Custom icon takes precedence
-        if i < self.customIconAssets.count, !self.customIconAssets[i].isEmpty {
-          image = Self.loadFlutterAsset(self.customIconAssets[i])
+        // Custom icon bytes take precedence
+        if i < self.customIconBytes.count, let data = self.customIconBytes[i] {
+          image = UIImage(data: data, scale: self.iconScale)?.withRenderingMode(.alwaysTemplate)
           // Apply tint color to custom icon if provided
           if i < self.customIconColors.count, 
              let colorNum = self.customIconColors[i] as? NSNumber,
              !(self.customIconColors[i] is NSNull) {
             let tintColor = Self.colorFromARGB(colorNum.intValue)
-            image = image?.withRenderingMode(.alwaysTemplate).withTintColor(tintColor, renderingMode: .alwaysOriginal)
+            image = image?.withTintColor(tintColor, renderingMode: .alwaysOriginal)
           }
         } else if i < symbols.count, !symbols[i].isEmpty {
           image = UIImage(systemName: symbols[i])
@@ -341,14 +348,14 @@ class CupertinoPopupMenuButtonPlatformView: NSObject, FlutterPlatformView {
       if i < enabled.count { action.isEnabled = enabled[i] }
       // Optional: set image where supported (iOS 13 has `image` on UIAlertAction)
       var img: UIImage? = nil
-      if i < customIconAssets.count, !customIconAssets[i].isEmpty {
-        img = Self.loadFlutterAsset(customIconAssets[i])
+      if i < customIconBytes.count, let data = customIconBytes[i] {
+        img = UIImage(data: data, scale: self.iconScale)?.withRenderingMode(.alwaysTemplate)
         // Apply tint color to custom icon if provided
         if i < self.customIconColors.count,
            let colorNum = self.customIconColors[i] as? NSNumber,
            !(self.customIconColors[i] is NSNull) {
           let tintColor = Self.colorFromARGB(colorNum.intValue)
-          img = img?.withRenderingMode(.alwaysTemplate).withTintColor(tintColor, renderingMode: .alwaysOriginal)
+          img = img?.withTintColor(tintColor, renderingMode: .alwaysOriginal)
         }
       } else if i < symbols.count, !symbols[i].isEmpty {
         img = UIImage(systemName: symbols[i])
@@ -386,8 +393,8 @@ class CupertinoPopupMenuButtonPlatformView: NSObject, FlutterPlatformView {
 
   @available(iOS 13.0, *)
   private func makeButtonIconImage() -> UIImage? {
-    if let asset = btnCustomIconAsset, !asset.isEmpty {
-      return Self.loadFlutterAsset(asset)
+    if let data = btnCustomIconBytes {
+      return UIImage(data: data, scale: self.iconScale)?.withRenderingMode(.alwaysTemplate)
     }
     guard let name = btnIconName, var image = UIImage(systemName: name) else { return nil }
     if let sz = btnIconSize {

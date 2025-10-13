@@ -152,23 +152,23 @@ class IconDemoPage extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: const [
                 CNIcon(
-                  symbol: CNSymbol('house.fill'),  // Fallback if asset not found
-                  customIconAsset: 'assets/icons/home.png',  // Custom PNG icon!
+                  symbol: CNSymbol('house.fill'),  // Fallback if not provided
+                  customIcon: CupertinoIcons.home,  // Custom IconData!
                   size: 24,
                 ),
                 CNIcon(
                   symbol: CNSymbol('house.fill'),
-                  customIconAsset: 'assets/icons/home.png',
+                  customIcon: CupertinoIcons.home,
                   size: 32,
                 ),
                 CNIcon(
                   symbol: CNSymbol('house.fill'),
-                  customIconAsset: 'assets/icons/home.png',
+                  customIcon: CupertinoIcons.home,
                   size: 40,
                 ),
                 CNIcon(
                   symbol: CNSymbol('house.fill'),
-                  customIconAsset: 'assets/icons/home.png',
+                  customIcon: CupertinoIcons.home,
                   size: 48,
                 ),
               ],
