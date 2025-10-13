@@ -1,5 +1,5 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart' show TabController, TabBarView;
+import 'package:flutter/material.dart' show TabController, TabBarView, Colors;
 import 'package:cupertino_native/cupertino_native.dart';
 
 class TabBarDemoPage extends StatefulWidget {
@@ -55,21 +55,31 @@ class _TabBarDemoPageState extends State<TabBarDemoPage>
             alignment: Alignment.bottomCenter,
             child: CNTabBar(
               items: const [
-                CNTabBarItem(label: 'Home', icon: CNSymbol('house.fill')),
+                CNTabBarItem(
+                  label: 'Home',
+                  customIconAsset: 'assets/icons/home.png',  // Custom PNG icon
+                  badge: '3',
+                ),
                 CNTabBarItem(
                   label: 'Profile',
                   icon: CNSymbol('person.crop.circle'),
+                  badge: '12',
                 ),
                 CNTabBarItem(
                   label: 'Settings',
                   icon: CNSymbol('gearshape.fill'),
                 ),
-                CNTabBarItem(icon: CNSymbol('magnifyingglass')),
+                CNTabBarItem(
+                  icon: CNSymbol('magnifyingglass'),
+                  badge: 'New',
+                ),
               ],
               currentIndex: _index,
               split: true,
               rightCount: 1,
+              splitSpacing: 8,
               shrinkCentered: true,
+              tint: Colors.red,
               onTap: (i) {
                 setState(() => _index = i);
                 _controller.animateTo(i);

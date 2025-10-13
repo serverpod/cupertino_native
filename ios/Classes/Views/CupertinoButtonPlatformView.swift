@@ -15,6 +15,7 @@ class CupertinoButtonPlatformView: NSObject, FlutterPlatformView {
 
     var title: String? = nil
     var iconName: String? = nil
+    var customIconAsset: String? = nil
     var iconSize: CGFloat? = nil
     var iconColor: UIColor? = nil
     var makeRound: Bool = false
@@ -27,6 +28,7 @@ class CupertinoButtonPlatformView: NSObject, FlutterPlatformView {
 
     if let dict = args as? [String: Any] {
       if let t = dict["buttonTitle"] as? String { title = t }
+      if let s = dict["buttonCustomIconAsset"] as? String { customIconAsset = s }
       if let s = dict["buttonIconName"] as? String { iconName = s }
       if let s = dict["buttonIconSize"] as? NSNumber { iconSize = CGFloat(truncating: s) }
       if let c = dict["buttonIconColor"] as? NSNumber { iconColor = Self.colorFromARGB(c.intValue) }
@@ -62,7 +64,20 @@ class CupertinoButtonPlatformView: NSObject, FlutterPlatformView {
     isEnabled = enabled
 
     var finalImage: UIImage? = nil
-    if let name = iconName, var image = UIImage(systemName: name) {
+    // Custom icon takes precedence over SF Symbol
+    if let asset = customIconAsset, !asset.isEmpty, var image = Self.loadFlutterAsset(asset) {
+      // Apply size if specified
+      if let sz = iconSize {
+        let targetSize = CGSize(width: sz, height: sz)
+        UIGraphicsBeginImageContextWithOptions(targetSize, false, 0.0)
+        image.draw(in: CGRect(origin: .zero, size: targetSize))
+        if let scaledImage = UIGraphicsGetImageFromCurrentImageContext() {
+          image = scaledImage
+        }
+        UIGraphicsEndImageContext()
+      }
+      finalImage = image
+    } else if let name = iconName, var image = UIImage(systemName: name) {
       if let sz = iconSize { image = image.applyingSymbolConfiguration(UIImage.SymbolConfiguration(pointSize: sz)) ?? image }
       if let mode = iconMode {
         switch mode {
@@ -198,6 +213,14 @@ class CupertinoButtonPlatformView: NSObject, FlutterPlatformView {
     let g = CGFloat((argb >> 8) & 0xFF) / 255.0
     let b = CGFloat(argb & 0xFF) / 255.0
     return UIColor(red: r, green: g, blue: b, alpha: a)
+  }
+
+  private static func loadFlutterAsset(_ assetPath: String) -> UIImage? {
+    let flutterKey = FlutterDartProject.lookupKey(forAsset: assetPath)
+    guard let path = Bundle.main.path(forResource: flutterKey, ofType: nil) else {
+      return nil
+    }
+    return UIImage(contentsOfFile: path)
   }
 
   private func applyButtonStyle(buttonStyle: String, round: Bool) {

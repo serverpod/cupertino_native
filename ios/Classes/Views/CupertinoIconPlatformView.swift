@@ -7,6 +7,7 @@ class CupertinoIconPlatformView: NSObject, FlutterPlatformView {
   private let imageView: UIImageView
 
   private var name: String = ""
+  private var customIconAsset: String?
   private var isDark: Bool = false
   private var size: CGFloat?
   private var color: UIColor?
@@ -21,6 +22,7 @@ class CupertinoIconPlatformView: NSObject, FlutterPlatformView {
 
     if let dict = args as? [String: Any] {
       if let s = dict["name"] as? String { self.name = s }
+      if let s = dict["customIconAsset"] as? String { self.customIconAsset = s }
       if let b = dict["isDark"] as? NSNumber { self.isDark = b.boolValue }
       if let style = dict["style"] as? [String: Any] {
         if let v = style["iconSize"] as? NSNumber { self.size = CGFloat(truncating: v) }
@@ -91,7 +93,13 @@ class CupertinoIconPlatformView: NSObject, FlutterPlatformView {
   func view() -> UIView { container }
 
   private func rebuild() {
-    var img: UIImage? = UIImage(systemName: name)
+    var img: UIImage? = nil
+    // Custom icon takes precedence over SF Symbol
+    if let asset = customIconAsset, !asset.isEmpty {
+      img = Self.loadFlutterAsset(asset)
+    } else {
+      img = UIImage(systemName: name)
+    }
     guard var image = img else { imageView.image = nil; return }
 
     if let s = size {
@@ -152,5 +160,13 @@ class CupertinoIconPlatformView: NSObject, FlutterPlatformView {
     let g = CGFloat((argb >> 8) & 0xFF) / 255.0
     let b = CGFloat(argb & 0xFF) / 255.0
     return UIColor(red: r, green: g, blue: b, alpha: a)
+  }
+
+  private static func loadFlutterAsset(_ assetPath: String) -> UIImage? {
+    let flutterKey = FlutterDartProject.lookupKey(forAsset: assetPath)
+    guard let path = Bundle.main.path(forResource: flutterKey, ofType: nil) else {
+      return nil
+    }
+    return UIImage(contentsOfFile: path)
   }
 }

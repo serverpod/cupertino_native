@@ -16,13 +16,28 @@ abstract class CNPopupMenuEntry {
 /// A selectable item in a popup menu.
 class CNPopupMenuItem extends CNPopupMenuEntry {
   /// Creates a selectable popup menu item.
-  const CNPopupMenuItem({required this.label, this.icon, this.enabled = true});
+  const CNPopupMenuItem({
+    required this.label,
+    this.icon,
+    this.customIconAsset,
+    this.iconColor,
+    this.enabled = true,
+  });
 
   /// Display label for the item.
   final String label;
 
   /// Optional SF Symbol shown before the label.
+  /// If both [icon] and [customIconAsset] are provided, [customIconAsset] takes precedence.
   final CNSymbol? icon;
+
+  /// Optional custom icon asset path (e.g., 'assets/icons/menu_item.png').
+  /// If provided, this takes precedence over [icon].
+  final String? customIconAsset;
+
+  /// Optional color for custom icons. This applies a tint color to the custom icon.
+  /// For SF Symbols, use the [icon]'s color parameter instead.
+  final Color? iconColor;
 
   /// Whether the item can be selected.
   final bool enabled;
@@ -51,6 +66,7 @@ class CNPopupMenuButton extends StatefulWidget {
     this.shrinkWrap = false,
     this.buttonStyle = CNButtonStyle.plain,
   }) : buttonIcon = null,
+       buttonCustomIconAsset = null,
        width = null,
        round = false;
 
@@ -58,6 +74,7 @@ class CNPopupMenuButton extends StatefulWidget {
   const CNPopupMenuButton.icon({
     super.key,
     required this.buttonIcon,
+    this.buttonCustomIconAsset,
     required this.items,
     required this.onSelected,
     this.tint,
@@ -73,7 +90,11 @@ class CNPopupMenuButton extends StatefulWidget {
   /// Text for the button (null when using [buttonIcon]).
   final String? buttonLabel; // null in icon mode
   /// Icon for the button (non-null in icon mode).
+  /// If both [buttonIcon] and [buttonCustomIconAsset] are provided, [buttonCustomIconAsset] takes precedence.
   final CNSymbol? buttonIcon; // non-null in icon mode
+  /// Optional custom icon asset path for the button (e.g., 'assets/icons/menu.png').
+  /// If provided, this takes precedence over [buttonIcon].
+  final String? buttonCustomIconAsset;
   // Fixed size (width = height) when in icon mode.
   /// Fixed width in icon mode; otherwise computed/intrinsic.
   final double? width;
@@ -196,6 +217,8 @@ class _CNPopupMenuButtonState extends State<CNPopupMenuButton> {
     // Flatten entries into parallel arrays for the platform view.
     final labels = <String>[];
     final symbols = <String>[];
+    final customIconAssets = <String>[];
+    final customIconColors = <int?>[];
     final isDivider = <bool>[];
     final enabled = <bool>[];
     final sizes = <double?>[];
@@ -207,6 +230,8 @@ class _CNPopupMenuButtonState extends State<CNPopupMenuButton> {
       if (e is CNPopupMenuDivider) {
         labels.add('');
         symbols.add('');
+        customIconAssets.add('');
+        customIconColors.add(null);
         isDivider.add(true);
         enabled.add(false);
         sizes.add(null);
@@ -217,6 +242,8 @@ class _CNPopupMenuButtonState extends State<CNPopupMenuButton> {
       } else if (e is CNPopupMenuItem) {
         labels.add(e.label);
         symbols.add(e.icon?.name ?? '');
+        customIconAssets.add(e.customIconAsset ?? '');
+        customIconColors.add(resolveColorToArgb(e.iconColor, context));
         isDivider.add(false);
         enabled.add(e.enabled);
         sizes.add(e.icon?.size);
@@ -233,6 +260,8 @@ class _CNPopupMenuButtonState extends State<CNPopupMenuButton> {
 
     final creationParams = <String, dynamic>{
       if (widget.buttonLabel != null) 'buttonTitle': widget.buttonLabel,
+      if (widget.buttonCustomIconAsset != null)
+        'buttonCustomIconAsset': widget.buttonCustomIconAsset,
       if (widget.buttonIcon != null) 'buttonIconName': widget.buttonIcon!.name,
       if (widget.buttonIcon?.size != null)
         'buttonIconSize': widget.buttonIcon!.size,
@@ -245,6 +274,8 @@ class _CNPopupMenuButtonState extends State<CNPopupMenuButton> {
       'buttonStyle': widget.buttonStyle.name,
       'labels': labels,
       'sfSymbols': symbols,
+      'customIconAssets': customIconAssets,
+      'customIconColors': customIconColors,
       'isDivider': isDivider,
       'enabled': enabled,
       'sfSymbolSizes': sizes,

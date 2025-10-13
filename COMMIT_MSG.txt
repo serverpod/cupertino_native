@@ -1,0 +1,43 @@
+feat: Add badge support and custom icon capabilities to all widgets
+
+Major new features in v0.2.0:
+
+1. Badge Support for Tab Bar (iOS)
+   - Added `badge` property to CNTabBarItem
+   - Display notification counts or custom text on tab bar items
+   - Automatically styled with native iOS badge appearance
+   - Note: macOS NSSegmentedControl doesn't support badges natively
+
+2. Custom Icon Support (All Widgets)
+   - Added `customIconAsset` parameter to:
+     * CNTabBarItem (for tab bar items)
+     * CNButton.icon (for icon buttons)
+     * CNIcon (for standalone icons)
+     * CNPopupMenuItem (for popup menu items)
+     * CNPopupMenuButton.icon (for popup button icons)
+   - Support for PNG, JPG, and other image formats from Flutter assets
+   - Custom icons take precedence over SF Symbols when both provided
+   - Implemented loadFlutterAsset helper for proper asset resolution
+
+3. Icon Color Tinting for Custom Icons
+   - Added `iconColor` parameter to CNPopupMenuItem
+   - Dynamically tint PNG/JPG icons with any color
+   - Uses template rendering mode for proper color application
+   - SF Symbols continue to use their existing color parameter
+
+4. Bug Fixes
+   - Fixed nullable color handling in popup menu Swift code
+   - Properly handle NSNull values from Flutter for colors and sizes
+   - Changed array types from [NSNumber] to [Any] for nullable support
+   - Fixed optional unwrapping issues in Swift implementation
+
+5. Example Updates
+   - Updated tab bar demo with badge and custom icon examples
+   - Added custom icon sections to button, icon, and popup menu demos
+   - Demonstrated icon color tinting in popup menu example
+   - Added home.png asset to showcase custom icon functionality
+
+Breaking Changes: None
+
+All features are backward compatible with existing code.
+

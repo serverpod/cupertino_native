@@ -8,13 +8,29 @@ import '../style/sf_symbol.dart';
 /// Immutable data describing a single tab bar item.
 class CNTabBarItem {
   /// Creates a tab bar item description.
-  const CNTabBarItem({this.label, this.icon});
+  const CNTabBarItem({
+    this.label,
+    this.icon,
+    this.badge,
+    this.customIconAsset,
+  });
 
   /// Optional tab item label.
   final String? label;
 
   /// Optional SF Symbol for the item.
+  /// If both [icon] and [customIconAsset] are provided, [customIconAsset] takes precedence.
   final CNSymbol? icon;
+
+  /// Optional badge text to display on the tab bar item.
+  /// On iOS, this displays as a red badge with the text.
+  /// On macOS, badges are not supported by NSSegmentedControl.
+  final String? badge;
+
+  /// Optional custom icon asset path (e.g., 'assets/icons/home.png').
+  /// Supports PNG, JPG, and other image formats supported by the platform.
+  /// If provided, this takes precedence over [icon].
+  final String? customIconAsset;
 }
 
 /// A Cupertino-native tab bar. Uses native UITabBar/NSTabView style visuals.
@@ -81,6 +97,8 @@ class _CNTabBarState extends State<CNTabBar> {
   double? _intrinsicWidth;
   List<String>? _lastLabels;
   List<String>? _lastSymbols;
+  List<String>? _lastBadges;
+  List<String>? _lastCustomIconAssets;
   bool? _lastSplit;
   int? _lastRightCount;
   double? _lastSplitSpacing;
@@ -127,6 +145,8 @@ class _CNTabBarState extends State<CNTabBar> {
 
     final labels = widget.items.map((e) => e.label ?? '').toList();
     final symbols = widget.items.map((e) => e.icon?.name ?? '').toList();
+    final badges = widget.items.map((e) => e.badge ?? '').toList();
+    final customIconAssets = widget.items.map((e) => e.customIconAsset ?? '').toList();
     final sizes = widget.items
         .map((e) => (widget.iconSize ?? e.icon?.size))
         .toList();
@@ -137,6 +157,8 @@ class _CNTabBarState extends State<CNTabBar> {
     final creationParams = <String, dynamic>{
       'labels': labels,
       'sfSymbols': symbols,
+      'badges': badges,
+      'customIconAssets': customIconAssets,
       'sfSymbolSizes': sizes,
       'sfSymbolColors': colors,
       'selectedIndex': widget.currentIndex,
@@ -232,15 +254,23 @@ class _CNTabBarState extends State<CNTabBar> {
     // Items update (for hot reload or dynamic changes)
     final labels = widget.items.map((e) => e.label ?? '').toList();
     final symbols = widget.items.map((e) => e.icon?.name ?? '').toList();
+    final badges = widget.items.map((e) => e.badge ?? '').toList();
+    final customIconAssets = widget.items.map((e) => e.customIconAsset ?? '').toList();
     if (_lastLabels?.join('|') != labels.join('|') ||
-        _lastSymbols?.join('|') != symbols.join('|')) {
+        _lastSymbols?.join('|') != symbols.join('|') ||
+        _lastBadges?.join('|') != badges.join('|') ||
+        _lastCustomIconAssets?.join('|') != customIconAssets.join('|')) {
       await ch.invokeMethod('setItems', {
         'labels': labels,
         'sfSymbols': symbols,
+        'badges': badges,
+        'customIconAssets': customIconAssets,
         'selectedIndex': widget.currentIndex,
       });
       _lastLabels = labels;
       _lastSymbols = symbols;
+      _lastBadges = badges;
+      _lastCustomIconAssets = customIconAssets;
       // Re-measure width in case content changed
       _requestIntrinsicSize();
     }
@@ -282,6 +312,8 @@ class _CNTabBarState extends State<CNTabBar> {
   void _cacheItems() {
     _lastLabels = widget.items.map((e) => e.label ?? '').toList();
     _lastSymbols = widget.items.map((e) => e.icon?.name ?? '').toList();
+    _lastBadges = widget.items.map((e) => e.badge ?? '').toList();
+    _lastCustomIconAssets = widget.items.map((e) => e.customIconAsset ?? '').toList();
   }
 
   Future<void> _requestIntrinsicSize() async {

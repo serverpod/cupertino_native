@@ -6,6 +6,8 @@ class CupertinoTabBarNSView: NSView {
   private let control: NSSegmentedControl
   private var currentLabels: [String] = []
   private var currentSymbols: [String] = []
+  private var currentBadges: [String] = []
+  private var currentCustomIconAssets: [String] = []
   private var currentSizes: [NSNumber] = []
   private var currentTint: NSColor? = nil
   private var currentBackground: NSColor? = nil
@@ -16,6 +18,8 @@ class CupertinoTabBarNSView: NSView {
 
     var labels: [String] = []
     var symbols: [String] = []
+    var badges: [String] = []
+    var customIconAssets: [String] = []
     var sizes: [NSNumber] = []
     var selectedIndex: Int = 0
     var isDark: Bool = false
@@ -25,6 +29,8 @@ class CupertinoTabBarNSView: NSView {
     if let dict = args as? [String: Any] {
       labels = (dict["labels"] as? [String]) ?? []
       symbols = (dict["sfSymbols"] as? [String]) ?? []
+      badges = (dict["badges"] as? [String]) ?? []
+      customIconAssets = (dict["customIconAssets"] as? [String]) ?? []
       sizes = (dict["sfSymbolSizes"] as? [NSNumber]) ?? []
       if let v = dict["selectedIndex"] as? NSNumber { selectedIndex = v.intValue }
       if let v = dict["isDark"] as? NSNumber { isDark = v.boolValue }
@@ -40,11 +46,13 @@ class CupertinoTabBarNSView: NSView {
     layer?.backgroundColor = NSColor.clear.cgColor
     appearance = NSAppearance(named: isDark ? .darkAqua : .aqua)
 
-    configureSegments(labels: labels, symbols: symbols, sizes: sizes)
+    configureSegments(labels: labels, symbols: symbols, customIconAssets: customIconAssets, sizes: sizes)
     if selectedIndex >= 0 { control.selectedSegment = selectedIndex }
     // Save current style and content for retinting
     self.currentLabels = labels
     self.currentSymbols = symbols
+    self.currentBadges = badges  // Note: macOS NSSegmentedControl doesn't support badges natively
+    self.currentCustomIconAssets = customIconAssets
     self.currentSizes = sizes
     self.currentTint = tint
     self.currentBackground = bg
@@ -100,11 +108,17 @@ class CupertinoTabBarNSView: NSView {
 
   required init?(coder: NSCoder) { return nil }
 
-  private func configureSegments(labels: [String], symbols: [String], sizes: [NSNumber]) {
-    let count = max(labels.count, symbols.count)
+  private func configureSegments(labels: [String], symbols: [String], customIconAssets: [String], sizes: [NSNumber]) {
+    let count = max(labels.count, max(symbols.count, customIconAssets.count))
     control.segmentCount = count
     for i in 0..<count {
-      if i < symbols.count, #available(macOS 11.0, *), var image = NSImage(systemSymbolName: symbols[i], accessibilityDescription: nil) {
+      // Custom icon takes precedence over SF Symbol
+      if i < customIconAssets.count && !customIconAssets[i].isEmpty,
+         let image = Self.loadFlutterAsset(customIconAssets[i]) {
+        control.setImage(image, forSegment: i)
+      } else if i < symbols.count && !symbols[i].isEmpty,
+                #available(macOS 11.0, *),
+                var image = NSImage(systemSymbolName: symbols[i], accessibilityDescription: nil) {
         if i < sizes.count, #available(macOS 12.0, *) {
           let size = CGFloat(truncating: sizes[i])
           let cfg = NSImage.SymbolConfiguration(pointSize: size, weight: .regular)
@@ -124,8 +138,10 @@ class CupertinoTabBarNSView: NSView {
     guard count > 0 else { return }
     let sel = control.selectedSegment
     for i in 0..<count {
-      // Only retint symbol-based segments
-      if let name = (i < currentSymbols.count ? currentSymbols[i] : nil), !name.isEmpty,
+      // Custom icons don't get retinted, only SF Symbols
+      let hasCustomIcon = i < currentCustomIconAssets.count && !currentCustomIconAssets[i].isEmpty
+      if !hasCustomIcon,
+         let name = (i < currentSymbols.count ? currentSymbols[i] : nil), !name.isEmpty,
          var image = NSImage(systemSymbolName: name, accessibilityDescription: nil) {
         if i < currentSizes.count, #available(macOS 12.0, *) {
           let size = CGFloat(truncating: currentSizes[i])
@@ -155,6 +171,15 @@ class CupertinoTabBarNSView: NSView {
 
   @objc private func onChanged(_ sender: NSSegmentedControl) {
     channel.invokeMethod("valueChanged", arguments: ["index": sender.selectedSegment])
+  }
+
+  private static func loadFlutterAsset(_ assetPath: String) -> NSImage? {
+    // Flutter assets need to be looked up with the proper key
+    let flutterKey = FlutterDartProject.lookupKey(forAsset: assetPath)
+    guard let path = Bundle.main.path(forResource: flutterKey, ofType: nil) else {
+      return nil
+    }
+    return NSImage(contentsOfFile: path)
   }
 }
 

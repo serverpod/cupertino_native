@@ -32,6 +32,45 @@ class _PopupMenuButtonDemoPageState extends State<PopupMenuButtonDemoPage> {
       ),
     ];
 
+    // Items with colored icons
+    final coloredItems = [
+      CNPopupMenuItem(
+        label: 'New File',
+        icon: const CNSymbol('doc.fill', size: 18, color: CupertinoColors.systemBlue),
+      ),
+      CNPopupMenuItem(
+        label: 'New Folder',
+        icon: const CNSymbol('folder.fill', size: 18, color: CupertinoColors.systemYellow),
+      ),
+      const CNPopupMenuDivider(),
+      CNPopupMenuItem(
+        label: 'Share',
+        icon: const CNSymbol('square.and.arrow.up', size: 18, color: CupertinoColors.systemGreen),
+      ),
+      CNPopupMenuItem(
+        label: 'Delete',
+        icon: const CNSymbol('trash.fill', size: 18, color: CupertinoColors.systemRed),
+      ),
+    ];
+
+    final customIconItems = [
+      CNPopupMenuItem(
+        label: 'Home',
+        customIconAsset: 'assets/icons/home.png',  // Custom PNG icon!
+        iconColor: CupertinoColors.systemBlue,  // Tint the custom PNG icon blue!
+      ),
+      CNPopupMenuItem(
+        label: 'Profile',
+        icon: const CNSymbol('person', size: 18, color: CupertinoColors.systemPurple),
+      ),
+      const CNPopupMenuDivider(),
+      CNPopupMenuItem(
+        label: 'Settings',
+        customIconAsset: 'assets/icons/home.png',
+        iconColor: CupertinoColors.systemOrange,  // Same PNG icon, different color!
+      ),
+    ];
+
     return CupertinoPageScaffold(
       navigationBar: const CupertinoNavigationBar(
         middle: Text('Popup Menu Button'),
@@ -69,6 +108,41 @@ class _PopupMenuButtonDemoPageState extends State<PopupMenuButtonDemoPage> {
                     setState(() => _lastSelected = index);
                   },
                   buttonStyle: CNButtonStyle.glass,
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('Colored icons'),
+                Spacer(),
+                CNPopupMenuButton.icon(
+                  buttonIcon: const CNSymbol('paintbrush.fill', size: 18, color: CupertinoColors.systemPink),
+                  size: 44,
+                  items: coloredItems,
+                  onSelected: (index) {
+                    setState(() => _lastSelected = index);
+                  },
+                  buttonStyle: CNButtonStyle.bordered,
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('Custom icon button'),
+                Spacer(),
+                CNPopupMenuButton.icon(
+                  buttonIcon: const CNSymbol('ellipsis', size: 18),
+                  buttonCustomIconAsset: 'assets/icons/home.png',  // Custom PNG icon!
+                  size: 44,
+                  items: customIconItems,
+                  onSelected: (index) {
+                    setState(() => _lastSelected = index);
+                  },
+                  buttonStyle: CNButtonStyle.tinted,
                 ),
               ],
             ),

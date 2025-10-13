@@ -145,6 +145,34 @@ class IconDemoPage extends StatelessWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 24),
+            const Text('Custom Icons (PNG/JPG)'),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: const [
+                CNIcon(
+                  symbol: CNSymbol('house.fill'),  // Fallback if asset not found
+                  customIconAsset: 'assets/icons/home.png',  // Custom PNG icon!
+                  size: 24,
+                ),
+                CNIcon(
+                  symbol: CNSymbol('house.fill'),
+                  customIconAsset: 'assets/icons/home.png',
+                  size: 32,
+                ),
+                CNIcon(
+                  symbol: CNSymbol('house.fill'),
+                  customIconAsset: 'assets/icons/home.png',
+                  size: 40,
+                ),
+                CNIcon(
+                  symbol: CNSymbol('house.fill'),
+                  customIconAsset: 'assets/icons/home.png',
+                  size: 48,
+                ),
+              ],
+            ),
           ],
         ),
       ),

@@ -84,7 +84,7 @@ class _ButtonDemoPageState extends State<ButtonDemoPage> {
               ],
             ),
             const SizedBox(height: 48),
-            const Text('Icon buttons'),
+            const Text('Icon buttons (SF Symbols)'),
             const SizedBox(height: 12),
             Wrap(
               spacing: 12,
@@ -130,6 +130,46 @@ class _ButtonDemoPageState extends State<ButtonDemoPage> {
                   icon: const CNSymbol('heart.fill', size: 18),
                   style: CNButtonStyle.prominentGlass,
                   onPressed: () => _set('Icon ProminentGlass'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 48),
+            const Text('Icon buttons (Custom Icons)'),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              alignment: WrapAlignment.center,
+              children: [
+                CNButton.icon(
+                  icon: const CNSymbol('house.fill', size: 18),
+                  customIconAsset: 'assets/icons/home.png',  // Custom PNG icon!
+                  style: CNButtonStyle.plain,
+                  onPressed: () => _set('Custom Icon Plain'),
+                ),
+                CNButton.icon(
+                  icon: const CNSymbol('house.fill', size: 18),
+                  customIconAsset: 'assets/icons/home.png',
+                  style: CNButtonStyle.gray,
+                  onPressed: () => _set('Custom Icon Gray'),
+                ),
+                CNButton.icon(
+                  icon: const CNSymbol('house.fill', size: 18),
+                  customIconAsset: 'assets/icons/home.png',
+                  style: CNButtonStyle.tinted,
+                  onPressed: () => _set('Custom Icon Tinted'),
+                ),
+                CNButton.icon(
+                  icon: const CNSymbol('house.fill', size: 18),
+                  customIconAsset: 'assets/icons/home.png',
+                  style: CNButtonStyle.bordered,
+                  onPressed: () => _set('Custom Icon Bordered'),
+                ),
+                CNButton.icon(
+                  icon: const CNSymbol('house.fill', size: 18),
+                  customIconAsset: 'assets/icons/home.png',
+                  style: CNButtonStyle.glass,
+                  onPressed: () => _set('Custom Icon Glass'),
                 ),
               ],
             ),

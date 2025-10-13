@@ -5,14 +5,16 @@ import 'package:flutter/services.dart';
 import '../channel/params.dart';
 import '../style/sf_symbol.dart';
 
-/// A platform-rendered SF Symbol icon.
+/// A platform-rendered SF Symbol icon or custom image icon.
 ///
-/// Renders an `SFSymbol` on iOS/macOS using native APIs for best fidelity.
+/// Renders an `SFSymbol` on iOS/macOS using native APIs for best fidelity,
+/// or displays a custom image asset.
 class CNIcon extends StatefulWidget {
   /// Creates a platform-rendered SF Symbol icon.
   const CNIcon({
     super.key,
     required this.symbol,
+    this.customIconAsset,
     this.size,
     this.color,
     this.mode,
@@ -21,7 +23,12 @@ class CNIcon extends StatefulWidget {
   });
 
   /// The SF Symbol to render.
+  /// If both [symbol] and [customIconAsset] are provided, [customIconAsset] takes precedence.
   final CNSymbol symbol;
+
+  /// Optional custom icon asset path (e.g., 'assets/icons/custom.png').
+  /// If provided, this takes precedence over [symbol].
+  final String? customIconAsset;
 
   /// Overrides the symbol's size.
   final double? size;
@@ -79,6 +86,8 @@ class _CNIconState extends State<CNIcon> {
     final symbol = widget.symbol;
     final creationParams = <String, dynamic>{
       'name': symbol.name,
+      if (widget.customIconAsset != null)
+        'customIconAsset': widget.customIconAsset,
       'isDark': _isDark,
       'style': <String, dynamic>{
         'iconSize': (widget.size ?? symbol.size),

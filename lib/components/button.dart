@@ -23,6 +23,7 @@ class CNButton extends StatefulWidget {
     this.shrinkWrap = false,
     this.style = CNButtonStyle.plain,
   }) : icon = null,
+       customIconAsset = null,
        width = null,
        round = false;
 
@@ -30,6 +31,7 @@ class CNButton extends StatefulWidget {
   const CNButton.icon({
     super.key,
     required this.icon,
+    this.customIconAsset,
     this.onPressed,
     this.enabled = true,
     this.tint,
@@ -45,7 +47,11 @@ class CNButton extends StatefulWidget {
   /// Button text (null in icon mode).
   final String? label; // null in icon mode
   /// Button icon (non-null in icon mode).
+  /// If both [icon] and [customIconAsset] are provided, [customIconAsset] takes precedence.
   final CNSymbol? icon; // non-null in icon mode
+  /// Optional custom icon asset path (e.g., 'assets/icons/button.png').
+  /// If provided, this takes precedence over [icon].
+  final String? customIconAsset;
   /// Callback when pressed.
   final VoidCallback? onPressed;
 
@@ -140,6 +146,8 @@ class _CNButtonState extends State<CNButton> {
 
     final creationParams = <String, dynamic>{
       if (widget.label != null) 'buttonTitle': widget.label,
+      if (widget.customIconAsset != null)
+        'buttonCustomIconAsset': widget.customIconAsset,
       if (widget.icon != null) 'buttonIconName': widget.icon!.name,
       if (widget.icon?.size != null) 'buttonIconSize': widget.icon!.size,
       if (widget.icon?.color != null)
