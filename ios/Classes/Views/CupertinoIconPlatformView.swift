@@ -74,8 +74,23 @@ class CupertinoIconPlatformView: NSObject, FlutterPlatformView {
           result(["width": 0.0, "height": 0.0])
         }
       case "setSymbol":
-        if let args = call.arguments as? [String: Any], let n = args["name"] as? String {
-          self.name = n
+        if let args = call.arguments as? [String: Any] {
+          // Handle imageAsset properties first (priority over SF Symbol)
+          if let assetPath = args["assetPath"] as? String, !assetPath.isEmpty {
+            self.assetPath = assetPath
+            self.imageData = nil
+            self.imageFormat = nil
+          } else if let imageData = args["imageData"] as? FlutterStandardTypedData {
+            self.imageData = imageData.data
+            self.imageFormat = args["imageFormat"] as? String
+            self.assetPath = nil
+          } else if let name = args["name"] as? String {
+            // Fallback to SF Symbol
+            self.name = name
+            self.assetPath = nil
+            self.imageData = nil
+            self.imageFormat = nil
+          }
           self.rebuild()
           result(nil)
         } else { result(FlutterError(code: "bad_args", message: "Missing name", details: nil)) }
@@ -86,6 +101,16 @@ class CupertinoIconPlatformView: NSObject, FlutterPlatformView {
           if let arr = args["iconPaletteColors"] as? [NSNumber] { self.palette = arr.map { Self.colorFromARGB($0.intValue) } }
           if let mode = args["iconRenderingMode"] as? String { self.renderingMode = mode }
           if let g = args["iconGradientEnabled"] as? NSNumber { self.gradientEnabled = g.boolValue }
+          // Handle imageAsset properties
+          if let assetPath = args["assetPath"] as? String, !assetPath.isEmpty {
+            self.assetPath = assetPath
+            self.imageData = nil
+            self.imageFormat = nil
+          } else if let imageData = args["imageData"] as? FlutterStandardTypedData {
+            self.imageData = imageData.data
+            self.imageFormat = args["imageFormat"] as? String
+            self.assetPath = nil
+          }
           self.rebuild()
           result(nil)
         } else { result(FlutterError(code: "bad_args", message: "Missing style", details: nil)) }

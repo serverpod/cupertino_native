@@ -268,12 +268,28 @@ channel.setMethodCallHandler { [weak self] call, result in
           let badges = (args["badges"] as? [String]) ?? []
           var customIconBytes: [Data?] = []
           var activeCustomIconBytes: [Data?] = []
+          var imageAssetPaths: [String] = []
+          var activeImageAssetPaths: [String] = []
+          var imageAssetData: [Data?] = []
+          var activeImageAssetData: [Data?] = []
+          var imageAssetFormats: [String] = []
+          var activeImageAssetFormats: [String] = []
           if let bytesArray = args["customIconBytes"] as? [FlutterStandardTypedData?] {
             customIconBytes = bytesArray.map { $0?.data }
           }
           if let bytesArray = args["activeCustomIconBytes"] as? [FlutterStandardTypedData?] {
             activeCustomIconBytes = bytesArray.map { $0?.data }
           }
+          imageAssetPaths = (args["imageAssetPaths"] as? [String]) ?? []
+          activeImageAssetPaths = (args["activeImageAssetPaths"] as? [String]) ?? []
+          if let bytesArray = args["imageAssetData"] as? [FlutterStandardTypedData?] {
+            imageAssetData = bytesArray.map { $0?.data }
+          }
+          if let bytesArray = args["activeImageAssetData"] as? [FlutterStandardTypedData?] {
+            activeImageAssetData = bytesArray.map { $0?.data }
+          }
+          imageAssetFormats = (args["imageAssetFormats"] as? [String]) ?? []
+          activeImageAssetFormats = (args["activeImageAssetFormats"] as? [String]) ?? []
           if let scale = args["iconScale"] as? NSNumber {
             self.iconScale = CGFloat(truncating: scale)
           }
@@ -284,22 +300,36 @@ channel.setMethodCallHandler { [weak self] call, result in
           self.currentBadges = badges
           self.currentCustomIconBytes = customIconBytes
           self.currentActiveCustomIconBytes = activeCustomIconBytes
-          // Note: imageAsset properties are not updated in this method as they're static
+          self.currentImageAssetPaths = imageAssetPaths
+          self.currentActiveImageAssetPaths = activeImageAssetPaths
+          self.currentImageAssetData = imageAssetData
+          self.currentActiveImageAssetData = activeImageAssetData
+          self.currentImageAssetFormats = imageAssetFormats
+          self.currentActiveImageAssetFormats = activeImageAssetFormats
           func buildItems(_ range: Range<Int>) -> [UITabBarItem] {
             var items: [UITabBarItem] = []
             for i in range {
               var image: UIImage? = nil
               var selectedImage: UIImage? = nil
               
-              // Unselected image: Custom icon takes precedence over SF Symbol
-              if i < customIconBytes.count, let data = customIconBytes[i] {
+              // Priority: imageAsset > customIconBytes > SF Symbol
+              // Unselected image
+              if i < imageAssetData.count, let data = imageAssetData[i] {
+                image = Self.createImageFromData(data, format: (i < imageAssetFormats.count) ? imageAssetFormats[i] : nil, scale: self.iconScale)
+              } else if i < imageAssetPaths.count && !imageAssetPaths[i].isEmpty {
+                image = Self.loadFlutterAsset(imageAssetPaths[i])
+              } else if i < customIconBytes.count, let data = customIconBytes[i] {
                 image = UIImage(data: data, scale: self.iconScale)?.withRenderingMode(.alwaysTemplate)
               } else if i < symbols.count && !symbols[i].isEmpty {
                 image = UIImage(systemName: symbols[i])
               }
               
               // Selected image: Use active versions if available
-              if i < activeCustomIconBytes.count, let data = activeCustomIconBytes[i] {
+              if i < activeImageAssetData.count, let data = activeImageAssetData[i] {
+                selectedImage = Self.createImageFromData(data, format: (i < activeImageAssetFormats.count) ? activeImageAssetFormats[i] : nil, scale: self.iconScale)
+              } else if i < activeImageAssetPaths.count && !activeImageAssetPaths[i].isEmpty {
+                selectedImage = Self.loadFlutterAsset(activeImageAssetPaths[i])
+              } else if i < activeCustomIconBytes.count, let data = activeCustomIconBytes[i] {
                 selectedImage = UIImage(data: data, scale: self.iconScale)?.withRenderingMode(.alwaysTemplate)
               } else if i < activeSymbols.count && !activeSymbols[i].isEmpty {
                 selectedImage = UIImage(systemName: activeSymbols[i])
@@ -354,6 +384,12 @@ channel.setMethodCallHandler { [weak self] call, result in
           let badges = self.currentBadges
           let customIconBytes = self.currentCustomIconBytes
           let activeCustomIconBytes = self.currentActiveCustomIconBytes
+          let imageAssetPaths = self.currentImageAssetPaths
+          let activeImageAssetPaths = self.currentActiveImageAssetPaths
+          let imageAssetData = self.currentImageAssetData
+          let activeImageAssetData = self.currentActiveImageAssetData
+          let imageAssetFormats = self.currentImageAssetFormats
+          let activeImageAssetFormats = self.currentActiveImageAssetFormats
           let appearance: UITabBarAppearance? = {
             if #available(iOS 13.0, *) { let ap = UITabBarAppearance(); ap.configureWithDefaultBackground(); return ap }
             return nil
@@ -364,15 +400,24 @@ channel.setMethodCallHandler { [weak self] call, result in
               var image: UIImage? = nil
               var selectedImage: UIImage? = nil
               
-              // Unselected image: Custom icon takes precedence over SF Symbol
-              if i < customIconBytes.count, let data = customIconBytes[i] {
+              // Priority: imageAsset > customIconBytes > SF Symbol
+              // Unselected image
+              if i < imageAssetData.count, let data = imageAssetData[i] {
+                image = Self.createImageFromData(data, format: (i < imageAssetFormats.count) ? imageAssetFormats[i] : nil, scale: self.iconScale)
+              } else if i < imageAssetPaths.count && !imageAssetPaths[i].isEmpty {
+                image = Self.loadFlutterAsset(imageAssetPaths[i])
+              } else if i < customIconBytes.count, let data = customIconBytes[i] {
                 image = UIImage(data: data, scale: self.iconScale)?.withRenderingMode(.alwaysTemplate)
               } else if i < symbols.count && !symbols[i].isEmpty {
                 image = UIImage(systemName: symbols[i])
               }
               
               // Selected image: Use active versions if available
-              if i < activeCustomIconBytes.count, let data = activeCustomIconBytes[i] {
+              if i < activeImageAssetData.count, let data = activeImageAssetData[i] {
+                selectedImage = Self.createImageFromData(data, format: (i < activeImageAssetFormats.count) ? activeImageAssetFormats[i] : nil, scale: self.iconScale)
+              } else if i < activeImageAssetPaths.count && !activeImageAssetPaths[i].isEmpty {
+                selectedImage = Self.loadFlutterAsset(activeImageAssetPaths[i])
+              } else if i < activeCustomIconBytes.count, let data = activeCustomIconBytes[i] {
                 selectedImage = UIImage(data: data, scale: self.iconScale)?.withRenderingMode(.alwaysTemplate)
               } else if i < activeSymbols.count && !activeSymbols[i].isEmpty {
                 selectedImage = UIImage(systemName: activeSymbols[i])
@@ -407,7 +452,14 @@ channel.setMethodCallHandler { [weak self] call, result in
             let leftWidth = left.sizeThatFits(.zero).width + leftInset * 2
             let rightWidth = right.sizeThatFits(.zero).width + rightInset * 2
             let total = leftWidth + rightWidth + spacing
-            if total > self.container.bounds.width {
+            
+            // Ensure minimum width for single items to maintain circular shape
+            let minItemWidth: CGFloat = 50.0 // Minimum width per item
+            let adjustedRightWidth = max(rightWidth, minItemWidth * CGFloat(rightCount))
+            let adjustedLeftWidth = max(leftWidth, minItemWidth * CGFloat(count - rightCount))
+            let adjustedTotal = adjustedLeftWidth + adjustedRightWidth + spacing
+            
+            if adjustedTotal > self.container.bounds.width {
               let rightFraction = CGFloat(rightCount) / CGFloat(count)
               NSLayoutConstraint.activate([
                 right.trailingAnchor.constraint(equalTo: self.container.trailingAnchor, constant: -rightInset),
@@ -424,11 +476,11 @@ channel.setMethodCallHandler { [weak self] call, result in
                 right.trailingAnchor.constraint(equalTo: self.container.trailingAnchor, constant: -rightInset),
                 right.topAnchor.constraint(equalTo: self.container.topAnchor),
                 right.bottomAnchor.constraint(equalTo: self.container.bottomAnchor),
-                right.widthAnchor.constraint(equalToConstant: rightWidth),
+                right.widthAnchor.constraint(equalToConstant: adjustedRightWidth),
                 left.leadingAnchor.constraint(equalTo: self.container.leadingAnchor, constant: leftInset),
                 left.topAnchor.constraint(equalTo: self.container.topAnchor),
                 left.bottomAnchor.constraint(equalTo: self.container.bottomAnchor),
-                left.widthAnchor.constraint(equalToConstant: leftWidth),
+                left.widthAnchor.constraint(equalToConstant: adjustedLeftWidth),
                 left.trailingAnchor.constraint(lessThanOrEqualTo: right.leadingAnchor, constant: -spacing),
               ])
             }

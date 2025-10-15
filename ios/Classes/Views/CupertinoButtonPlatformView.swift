@@ -168,39 +168,56 @@ class CupertinoButtonPlatformView: NSObject, FlutterPlatformView {
       case "setButtonIcon":
         if let args = call.arguments as? [String: Any] {
           var image: UIImage? = nil
-          if let name = args["buttonIconName"] as? String { image = UIImage(systemName: name) }
-          if let s = args["buttonIconSize"] as? NSNumber, let img = image {
-            image = img.applyingSymbolConfiguration(UIImage.SymbolConfiguration(pointSize: CGFloat(truncating: s))) ?? img
+          
+          // Priority: imageAsset > customIconBytes > SF Symbol
+          // Handle imageAsset properties first
+          if let assetPath = args["buttonAssetPath"] as? String, !assetPath.isEmpty {
+            image = Self.loadFlutterAsset(assetPath)
+          } else if let imageData = args["buttonImageData"] as? FlutterStandardTypedData {
+            let format = args["buttonImageFormat"] as? String
+            image = Self.createImageFromData(imageData.data, format: format, scale: UIScreen.main.scale)
+          } else if let customIconBytes = args["buttonCustomIconBytes"] as? FlutterStandardTypedData {
+            image = UIImage(data: customIconBytes.data, scale: UIScreen.main.scale)?.withRenderingMode(.alwaysTemplate)
+          } else if let name = args["buttonIconName"] as? String {
+            image = UIImage(systemName: name)
           }
-          if let mode = args["buttonIconRenderingMode"] as? String, let img0 = image {
-            var img = img0
-            switch mode {
-            case "hierarchical":
-              if #available(iOS 15.0, *), let c = args["buttonIconColor"] as? NSNumber {
-                let cfg = UIImage.SymbolConfiguration(hierarchicalColor: Self.colorFromARGB(c.intValue))
-                image = img.applyingSymbolConfiguration(cfg) ?? img
-              }
-            case "palette":
-              if #available(iOS 15.0, *), let pal = args["buttonIconPaletteColors"] as? [NSNumber] {
-                let cols = pal.map { Self.colorFromARGB($0.intValue) }
-                let cfg = UIImage.SymbolConfiguration(paletteColors: cols)
-                image = img.applyingSymbolConfiguration(cfg) ?? img
-              }
-            case "multicolor":
-              if #available(iOS 15.0, *) {
-                let cfg = UIImage.SymbolConfiguration.preferringMulticolor()
-                image = img.applyingSymbolConfiguration(cfg) ?? img
-              }
-            case "monochrome":
-              if let c = args["buttonIconColor"] as? NSNumber, #available(iOS 13.0, *) {
-                image = img.withTintColor(Self.colorFromARGB(c.intValue), renderingMode: .alwaysOriginal)
-              }
-            default:
-              break
+          
+          // Apply size and styling if image was found
+          if let img = image {
+            if let s = args["buttonIconSize"] as? NSNumber {
+              image = img.applyingSymbolConfiguration(UIImage.SymbolConfiguration(pointSize: CGFloat(truncating: s))) ?? img
             }
-          } else if let c = args["buttonIconColor"] as? NSNumber, let img = image, #available(iOS 13.0, *) {
-            image = img.withTintColor(Self.colorFromARGB(c.intValue), renderingMode: .alwaysOriginal)
+            if let mode = args["buttonIconRenderingMode"] as? String, let img0 = image {
+              var img = img0
+              switch mode {
+              case "hierarchical":
+                if #available(iOS 15.0, *), let c = args["buttonIconColor"] as? NSNumber {
+                  let cfg = UIImage.SymbolConfiguration(hierarchicalColor: Self.colorFromARGB(c.intValue))
+                  image = img.applyingSymbolConfiguration(cfg) ?? img
+                }
+              case "palette":
+                if #available(iOS 15.0, *), let pal = args["buttonIconPaletteColors"] as? [NSNumber] {
+                  let cols = pal.map { Self.colorFromARGB($0.intValue) }
+                  let cfg = UIImage.SymbolConfiguration(paletteColors: cols)
+                  image = img.applyingSymbolConfiguration(cfg) ?? img
+                }
+              case "multicolor":
+                if #available(iOS 15.0, *) {
+                  let cfg = UIImage.SymbolConfiguration.preferringMulticolor()
+                  image = img.applyingSymbolConfiguration(cfg) ?? img
+                }
+              case "monochrome":
+                if let c = args["buttonIconColor"] as? NSNumber, #available(iOS 13.0, *) {
+                  image = img.withTintColor(Self.colorFromARGB(c.intValue), renderingMode: .alwaysOriginal)
+                }
+              default:
+                break
+              }
+            } else if let c = args["buttonIconColor"] as? NSNumber, let img = image, #available(iOS 13.0, *) {
+              image = img.withTintColor(Self.colorFromARGB(c.intValue), renderingMode: .alwaysOriginal)
+            }
           }
+          
           self.setButtonContent(title: nil, image: image, iconOnly: true)
           result(nil)
         } else { result(FlutterError(code: "bad_args", message: "Missing icon args", details: nil)) }

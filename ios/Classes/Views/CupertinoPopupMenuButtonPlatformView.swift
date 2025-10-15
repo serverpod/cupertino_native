@@ -190,6 +190,12 @@ class CupertinoPopupMenuButtonPlatformView: NSObject, FlutterPlatformView {
           self.itemModes = (args["sfSymbolRenderingModes"] as? [String?]) ?? []
           self.itemPalettes = (args["sfSymbolPaletteColors"] as? [[NSNumber]]) ?? []
           self.itemGradients = (args["sfSymbolGradientEnabled"] as? [NSNumber?]) ?? []
+          // Handle imageAsset properties
+          self.imageAssetPaths = (args["imageAssetPaths"] as? [String]) ?? []
+          if let bytesArray = args["imageAssetData"] as? [FlutterStandardTypedData?] {
+            self.imageAssetData = bytesArray.map { $0?.data }
+          }
+          self.imageAssetFormats = (args["imageAssetFormats"] as? [String]) ?? []
           self.rebuildMenu(defaultSizes: sizes, defaultColors: colors)
           result(nil)
         } else { result(FlutterError(code: "bad_args", message: "Missing items", details: nil)) }
