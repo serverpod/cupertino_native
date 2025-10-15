@@ -27,7 +27,7 @@ class CupertinoTabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelega
   private var iconScale: CGFloat = UIScreen.main.scale
   private var leftInsetVal: CGFloat = 0
   private var rightInsetVal: CGFloat = 0
-  private var splitSpacingVal: CGFloat = 8
+  private var splitSpacingVal: CGFloat = 12 // Apple's recommended spacing for visual separation
 
   init(frame: CGRect, viewId: Int64, args: Any?, messenger: FlutterBinaryMessenger) {
     self.channel = FlutterMethodChannel(name: "CupertinoNativeTabBar_\(viewId)", binaryMessenger: messenger)
@@ -162,6 +162,7 @@ class CupertinoTabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelega
       if let bg = bg { left.barTintColor = bg; right.barTintColor = bg }
       if #available(iOS 10.0, *), let tint = tint { left.tintColor = tint; right.tintColor = tint }
       if let ap = appearance { if #available(iOS 13.0, *) { left.standardAppearance = ap; right.standardAppearance = ap } }
+      
       left.items = buildItems(0..<leftEnd)
       right.items = buildItems(leftEnd..<count)
       if selectedIndex < leftEnd, let items = left.items {
@@ -180,7 +181,8 @@ class CupertinoTabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelega
       let total = leftWidth + rightWidth + spacing
       
       // Ensure minimum width for single items to maintain circular shape
-      let minItemWidth: CGFloat = 50.0 // Minimum width per item
+      // Following Apple's HIG: minimum 44pt touch target, with 8pt spacing
+      let minItemWidth: CGFloat = 44.0 // Apple's minimum touch target size
       let adjustedRightWidth = max(rightWidth, minItemWidth * CGFloat(rightCount))
       let adjustedLeftWidth = max(leftWidth, minItemWidth * CGFloat(count - rightCount))
       let adjustedTotal = adjustedLeftWidth + adjustedRightWidth + spacing

@@ -10,6 +10,7 @@ class ButtonDemoPage extends StatefulWidget {
 
 class _ButtonDemoPageState extends State<ButtonDemoPage> {
   String _last = 'None';
+  bool _useAlternateSvgIcons = false;
 
   void _set(String what) => setState(() => _last = what);
 
@@ -174,7 +175,31 @@ class _ButtonDemoPageState extends State<ButtonDemoPage> {
               ],
             ),
             const SizedBox(height: 48),
-            const Text('Icon buttons (SVG Assets)'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Icon buttons (SVG Assets)'),
+                CupertinoButton(
+                  onPressed: () {
+                    setState(() {
+                      _useAlternateSvgIcons = !_useAlternateSvgIcons;
+                    });
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: CupertinoColors.systemBlue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: CupertinoColors.systemBlue.withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      _useAlternateSvgIcons ? 'Reset' : 'Switch',
+                      style: const TextStyle(fontSize: 12, color: CupertinoColors.systemBlue),
+                    ),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 12),
             Wrap(
               spacing: 12,
@@ -183,37 +208,57 @@ class _ButtonDemoPageState extends State<ButtonDemoPage> {
               children: [
                 CNButton.icon(
                   icon: const CNSymbol('house.fill', size: 18),
-                  imageAsset: const CNImageAsset('assets/icons/home.svg', size: 18),
+                  imageAsset: CNImageAsset(
+                    _useAlternateSvgIcons ? 'assets/icons/profile.svg' : 'assets/icons/home.svg', 
+                    size: 18
+                  ),
                   style: CNButtonStyle.plain,
                   onPressed: () => _set('SVG Plain'),
                 ),
                 CNButton.icon(
                   icon: const CNSymbol('house.fill', size: 18),
-                  imageAsset: const CNImageAsset('assets/icons/search.svg', size: 18),
+                  imageAsset: CNImageAsset(
+                    _useAlternateSvgIcons ? 'assets/icons/chat.svg' : 'assets/icons/search.svg', 
+                    size: 18
+                  ),
                   style: CNButtonStyle.gray,
                   onPressed: () => _set('SVG Gray'),
                 ),
                 CNButton.icon(
                   icon: const CNSymbol('house.fill', size: 18),
-                  imageAsset: const CNImageAsset('assets/icons/profile.svg', size: 18),
+                  imageAsset: CNImageAsset(
+                    _useAlternateSvgIcons ? 'assets/icons/home.svg' : 'assets/icons/profile.svg', 
+                    size: 18
+                  ),
                   style: CNButtonStyle.tinted,
                   onPressed: () => _set('SVG Tinted'),
                 ),
                 CNButton.icon(
                   icon: const CNSymbol('house.fill', size: 18),
-                  imageAsset: const CNImageAsset('assets/icons/chat.svg', size: 18),
+                  imageAsset: CNImageAsset(
+                    _useAlternateSvgIcons ? 'assets/icons/search.svg' : 'assets/icons/chat.svg', 
+                    size: 18
+                  ),
                   style: CNButtonStyle.bordered,
                   onPressed: () => _set('SVG Bordered'),
                 ),
                 CNButton.icon(
                   icon: const CNSymbol('house.fill', size: 18),
-                  imageAsset: const CNImageAsset('assets/icons/home.svg', size: 18, color: CupertinoColors.systemRed),
+                  imageAsset: CNImageAsset(
+                    _useAlternateSvgIcons ? 'assets/icons/chat.svg' : 'assets/icons/home.svg', 
+                    size: 18, 
+                    color: CupertinoColors.systemRed
+                  ),
                   style: CNButtonStyle.glass,
                   onPressed: () => _set('SVG Glass'),
                 ),
                 CNButton.icon(
                   icon: const CNSymbol('house.fill', size: 18),
-                  imageAsset: const CNImageAsset('assets/icons/search.svg', size: 18, color: CupertinoColors.systemBlue),
+                  imageAsset: CNImageAsset(
+                    _useAlternateSvgIcons ? 'assets/icons/profile.svg' : 'assets/icons/search.svg', 
+                    size: 18, 
+                    color: CupertinoColors.systemBlue
+                  ),
                   style: CNButtonStyle.prominentGlass,
                   onPressed: () => _set('SVG ProminentGlass'),
                 ),

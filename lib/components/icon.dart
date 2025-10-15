@@ -280,7 +280,16 @@ class _CNIconState extends State<CNIcon> {
     }
 
     if (_lastName != name) {
-      await channel.invokeMethod('setSymbol', {'name': name});
+      final symbolArgs = <String, dynamic>{'name': name};
+      
+      // Add imageAsset properties if using imageAsset
+      if (widget.imageAsset != null) {
+        symbolArgs['assetPath'] = widget.imageAsset!.assetPath;
+        symbolArgs['imageData'] = widget.imageAsset!.imageData;
+        symbolArgs['imageFormat'] = widget.imageAsset!.imageFormat;
+      }
+      
+      await channel.invokeMethod('setSymbol', symbolArgs);
       _lastName = name;
     }
 
@@ -301,6 +310,14 @@ class _CNIconState extends State<CNIcon> {
       style['iconGradientEnabled'] = gradient;
       _lastGradient = gradient;
     }
+    
+    // Add imageAsset properties if using imageAsset
+    if (widget.imageAsset != null) {
+      style['assetPath'] = widget.imageAsset!.assetPath;
+      style['imageData'] = widget.imageAsset!.imageData;
+      style['imageFormat'] = widget.imageAsset!.imageFormat;
+    }
+    
     if (style.isNotEmpty) {
       await channel.invokeMethod('setStyle', style);
     }

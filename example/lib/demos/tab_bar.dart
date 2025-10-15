@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart' show TabController, TabBarView, Colors, Icons;
+import 'package:flutter/material.dart'
+    show TabController, TabBarView, Colors;
 import 'package:cupertino_native/cupertino_native.dart';
 
 class TabBarDemoPage extends StatefulWidget {
@@ -13,6 +14,7 @@ class _TabBarDemoPageState extends State<TabBarDemoPage>
     with SingleTickerProviderStateMixin {
   late final TabController _controller;
   int _index = 0;
+  bool _useAlternateIcons = false;
 
   @override
   void initState() {
@@ -54,33 +56,71 @@ class _TabBarDemoPageState extends State<TabBarDemoPage>
           Align(
             alignment: Alignment.bottomCenter,
             child: CNTabBar(
-              items: [
-                CNTabBarItem(
-                  label: 'Home',
-                  // Using SVG assets from assets/icons/
-                  imageAsset: CNImageAsset('assets/icons/home.svg'),
-                  activeImageAsset: CNImageAsset('assets/icons/home_filled.svg'),
-                  badge: '3',
-                ),
-                CNTabBarItem(
-                  label: 'Search',
-                  // Using SVG assets
-                  imageAsset: CNImageAsset('assets/icons/search.svg'),
-                  activeImageAsset: CNImageAsset('assets/icons/search-filled.svg'),
-                  badge: '12',
-                ),
-                CNTabBarItem(
-                  label: 'Profile',
-                  // Using SVG assets
-                  imageAsset: CNImageAsset('assets/icons/profile.svg'),
-                  activeImageAsset: CNImageAsset('assets/icons/profile-filled.svg'),
-                ),
-                CNTabBarItem(
-                  // Icon-only tab using SVG
-                  imageAsset: CNImageAsset('assets/icons/chat.svg'),
-                  activeImageAsset: CNImageAsset('assets/icons/chat-filled.svg'),
-                ),
-              ],
+              items: _useAlternateIcons
+                  ? [
+                      // Alternate SVG icons to test setState
+                      CNTabBarItem(
+                        label: 'Home',
+                        imageAsset: CNImageAsset('assets/icons/profile.svg'),
+                        activeImageAsset: CNImageAsset(
+                          'assets/icons/profile-filled.svg',
+                        ),
+                        badge: '5',
+                      ),
+                      CNTabBarItem(
+                        label: 'Search',
+                        imageAsset: CNImageAsset('assets/icons/chat.svg'),
+                        activeImageAsset: CNImageAsset(
+                          'assets/icons/chat-filled.svg',
+                        ),
+                        badge: '8',
+                      ),
+                      CNTabBarItem(
+                        label: 'Profile',
+                        imageAsset: CNImageAsset('assets/icons/home.svg'),
+                        activeImageAsset: CNImageAsset(
+                          'assets/icons/home_filled.svg',
+                        ),
+                      ),
+                      CNTabBarItem(
+                        imageAsset: CNImageAsset('assets/icons/search.svg'),
+                        activeImageAsset: CNImageAsset(
+                          'assets/icons/search-filled.svg',
+                        ),
+                      ),
+                    ]
+                  : [
+                      // Original SVG icons
+                      CNTabBarItem(
+                        label: 'Home',
+                        imageAsset: CNImageAsset('assets/icons/home.svg'),
+                        activeImageAsset: CNImageAsset(
+                          'assets/icons/home_filled.svg',
+                        ),
+                        badge: '3',
+                      ),
+                      CNTabBarItem(
+                        label: 'Search',
+                        imageAsset: CNImageAsset('assets/icons/search.svg'),
+                        activeImageAsset: CNImageAsset(
+                          'assets/icons/search-filled.svg',
+                        ),
+                        badge: '12',
+                      ),
+                      CNTabBarItem(
+                        label: 'Profile',
+                        imageAsset: CNImageAsset('assets/icons/profile.svg'),
+                        activeImageAsset: CNImageAsset(
+                          'assets/icons/profile-filled.svg',
+                        ),
+                      ),
+                      CNTabBarItem(
+                        imageAsset: CNImageAsset('assets/icons/chat.svg'),
+                        activeImageAsset: CNImageAsset(
+                          'assets/icons/chat-filled.svg',
+                        ),
+                      ),
+                    ],
               currentIndex: _index,
               split: true,
               rightCount: 1,
@@ -91,6 +131,30 @@ class _TabBarDemoPageState extends State<TabBarDemoPage>
                 setState(() => _index = i);
                 _controller.animateTo(i);
               },
+            ),
+          ),
+          // Cupertino button to test setState
+          Positioned(
+            top: 100,
+            right: 20,
+            child: CupertinoButton(
+              onPressed: () {
+                setState(() {
+                  _useAlternateIcons = !_useAlternateIcons;
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: CupertinoColors.systemBlue.withOpacity(0.8),
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                child: Icon(
+                  _useAlternateIcons ? CupertinoIcons.refresh : CupertinoIcons.arrow_2_squarepath,
+                  color: CupertinoColors.white,
+                  size: 24,
+                ),
+              ),
             ),
           ),
         ],

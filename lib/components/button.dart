@@ -122,6 +122,7 @@ class _CNButtonState extends State<CNButton> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _syncBrightnessIfNeeded();
+    _syncPropsToNativeIfNeeded();
   }
 
   @override
@@ -375,29 +376,49 @@ class _CNButtonState extends State<CNButton> {
       final iconSize = preIconSize;
       final iconColor = preIconColor;
       final updates = <String, dynamic>{};
-      if (_lastIconName != iconName && iconName != null) {
-        updates['buttonIconName'] = iconName;
-        _lastIconName = iconName;
+      
+      // Handle imageAsset (takes precedence over SF Symbol)
+      if (widget.imageAsset != null) {
+        updates['buttonAssetPath'] = widget.imageAsset!.assetPath;
+        updates['buttonImageData'] = widget.imageAsset!.imageData;
+        updates['buttonImageFormat'] = widget.imageAsset!.imageFormat;
+        updates['buttonIconSize'] = widget.imageAsset!.size;
+        if (widget.imageAsset!.color != null) {
+          updates['buttonIconColor'] = resolveColorToArgb(widget.imageAsset!.color, context);
+        }
+        if (widget.imageAsset!.mode != null) {
+          updates['buttonIconRenderingMode'] = widget.imageAsset!.mode!.name;
+        }
+        if (widget.imageAsset!.gradient != null) {
+          updates['buttonIconGradientEnabled'] = widget.imageAsset!.gradient;
+        }
+      } else {
+        // Fallback to SF Symbol
+        if (_lastIconName != iconName && iconName != null) {
+          updates['buttonIconName'] = iconName;
+          _lastIconName = iconName;
+        }
+        if (_lastIconSize != iconSize && iconSize != null) {
+          updates['buttonIconSize'] = iconSize;
+          _lastIconSize = iconSize;
+        }
+        if (_lastIconColor != iconColor && iconColor != null) {
+          updates['buttonIconColor'] = iconColor;
+          _lastIconColor = iconColor;
+        }
+        if (widget.icon?.mode != null) {
+          updates['buttonIconRenderingMode'] = widget.icon!.mode!.name;
+        }
+        if (widget.icon?.paletteColors != null) {
+          updates['buttonIconPaletteColors'] = widget.icon!.paletteColors!
+              .map((c) => resolveColorToArgb(c, context))
+              .toList();
+        }
+        if (widget.icon?.gradient != null) {
+          updates['buttonIconGradientEnabled'] = widget.icon!.gradient;
+        }
       }
-      if (_lastIconSize != iconSize && iconSize != null) {
-        updates['buttonIconSize'] = iconSize;
-        _lastIconSize = iconSize;
-      }
-      if (_lastIconColor != iconColor && iconColor != null) {
-        updates['buttonIconColor'] = iconColor;
-        _lastIconColor = iconColor;
-      }
-      if (widget.icon?.mode != null) {
-        updates['buttonIconRenderingMode'] = widget.icon!.mode!.name;
-      }
-      if (widget.icon?.paletteColors != null) {
-        updates['buttonIconPaletteColors'] = widget.icon!.paletteColors!
-            .map((c) => resolveColorToArgb(c, context))
-            .toList();
-      }
-      if (widget.icon?.gradient != null) {
-        updates['buttonIconGradientEnabled'] = widget.icon!.gradient;
-      }
+      
       if (updates.isNotEmpty) {
         await ch.invokeMethod('setButtonIcon', updates);
       }

@@ -1,8 +1,15 @@
 import 'package:flutter/cupertino.dart';
 import 'package:cupertino_native/cupertino_native.dart';
 
-class IconDemoPage extends StatelessWidget {
+class IconDemoPage extends StatefulWidget {
   const IconDemoPage({super.key});
+
+  @override
+  State<IconDemoPage> createState() => _IconDemoPageState();
+}
+
+class _IconDemoPageState extends State<IconDemoPage> {
+  bool _useAlternateSvgIcons = false;
 
   @override
   Widget build(BuildContext context) {
@@ -146,25 +153,57 @@ class IconDemoPage extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 24),
-            const Text('SVG Image Assets'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('SVG Image Assets'),
+                CupertinoButton(
+                  onPressed: () {
+                    setState(() {
+                      _useAlternateSvgIcons = !_useAlternateSvgIcons;
+                    });
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: CupertinoColors.systemBlue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: CupertinoColors.systemBlue.withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      _useAlternateSvgIcons ? 'Reset' : 'Switch',
+                      style: const TextStyle(fontSize: 12, color: CupertinoColors.systemBlue),
+                    ),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: const [
+              children: [
                 CNIcon(
-                  imageAsset: CNImageAsset('assets/icons/home.svg'),
+                  imageAsset: CNImageAsset(
+                    _useAlternateSvgIcons ? 'assets/icons/profile.svg' : 'assets/icons/home.svg'
+                  ),
                   size: 24,
                 ),
                 CNIcon(
-                  imageAsset: CNImageAsset('assets/icons/search.svg'),
+                  imageAsset: CNImageAsset(
+                    _useAlternateSvgIcons ? 'assets/icons/chat.svg' : 'assets/icons/search.svg'
+                  ),
                   size: 32,
                 ),
                 CNIcon(
-                  imageAsset: CNImageAsset('assets/icons/profile.svg'),
+                  imageAsset: CNImageAsset(
+                    _useAlternateSvgIcons ? 'assets/icons/home.svg' : 'assets/icons/profile.svg'
+                  ),
                   size: 40,
                 ),
                 CNIcon(
-                  imageAsset: CNImageAsset('assets/icons/chat.svg'),
+                  imageAsset: CNImageAsset(
+                    _useAlternateSvgIcons ? 'assets/icons/search.svg' : 'assets/icons/chat.svg'
+                  ),
                   size: 48,
                 ),
               ],
@@ -174,16 +213,20 @@ class IconDemoPage extends StatelessWidget {
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: const [
+              children: [
                 CNIcon(
-                  symbol: CNSymbol('house.fill'),
-                  imageAsset: CNImageAsset('assets/icons/home.svg'),
+                  symbol: const CNSymbol('house.fill'),
+                  imageAsset: CNImageAsset(
+                    _useAlternateSvgIcons ? 'assets/icons/profile.svg' : 'assets/icons/home.svg'
+                  ),
                   size: 24,
                 ),
                 const SizedBox(width: 16),
                 CNIcon(
-                  symbol: CNSymbol('magnifyingglass'),
-                  imageAsset: CNImageAsset('assets/icons/search.svg'),
+                  symbol: const CNSymbol('magnifyingglass'),
+                  imageAsset: CNImageAsset(
+                    _useAlternateSvgIcons ? 'assets/icons/chat.svg' : 'assets/icons/search.svg'
+                  ),
                   size: 32,
                 ),
               ],

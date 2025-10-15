@@ -517,6 +517,9 @@ class _CNPopupMenuButtonState extends State<CNPopupMenuButton> {
     final updModes = <String?>[];
     final updPalettes = <List<int?>?>[];
     final updGradients = <bool?>[];
+    final updImageAssetPaths = <String>[];
+    final updImageAssetData = <Uint8List?>[];
+    final updImageAssetFormats = <String>[];
     for (final e in widget.items) {
       if (e is CNPopupMenuDivider) {
         updLabels.add('');
@@ -528,20 +531,34 @@ class _CNPopupMenuButtonState extends State<CNPopupMenuButton> {
         updModes.add(null);
         updPalettes.add(null);
         updGradients.add(null);
+        updImageAssetPaths.add('');
+        updImageAssetData.add(null);
+        updImageAssetFormats.add('');
       } else if (e is CNPopupMenuItem) {
         updLabels.add(e.label);
         updSymbols.add(e.icon?.name ?? '');
         updIsDivider.add(false);
         updEnabled.add(e.enabled);
-        updSizes.add(e.icon?.size);
-        updColors.add(resolveColorToArgb(e.icon?.color, context));
-        updModes.add(e.icon?.mode?.name);
+        updSizes.add(e.imageAsset?.size ?? e.icon?.size);
+        updColors.add(resolveColorToArgb(e.imageAsset?.color ?? e.icon?.color, context));
+        updModes.add(e.imageAsset?.mode?.name ?? e.icon?.mode?.name);
         updPalettes.add(
           e.icon?.paletteColors
               ?.map((c) => resolveColorToArgb(c, context))
               .toList(),
         );
-        updGradients.add(e.icon?.gradient);
+        updGradients.add(e.imageAsset?.gradient ?? e.icon?.gradient);
+        
+        // Handle imageAsset for menu items
+        if (e.imageAsset != null) {
+          updImageAssetPaths.add(e.imageAsset!.assetPath);
+          updImageAssetData.add(e.imageAsset!.imageData);
+          updImageAssetFormats.add(e.imageAsset!.imageFormat ?? '');
+        } else {
+          updImageAssetPaths.add('');
+          updImageAssetData.add(null);
+          updImageAssetFormats.add('');
+        }
       }
     }
     // Capture context-dependent values before any awaits
@@ -570,29 +587,49 @@ class _CNPopupMenuButtonState extends State<CNPopupMenuButton> {
       final iconSize = preIconSize;
       final iconColor = preIconColor;
       final updates = <String, dynamic>{};
-      if (_lastIconName != iconName && iconName != null) {
-        updates['buttonIconName'] = iconName;
-        _lastIconName = iconName;
+      
+      // Handle button imageAsset (takes precedence over SF Symbol)
+      if (widget.buttonImageAsset != null) {
+        updates['buttonAssetPath'] = widget.buttonImageAsset!.assetPath;
+        updates['buttonImageData'] = widget.buttonImageAsset!.imageData;
+        updates['buttonImageFormat'] = widget.buttonImageAsset!.imageFormat;
+        updates['buttonIconSize'] = widget.buttonImageAsset!.size;
+        if (widget.buttonImageAsset!.color != null) {
+          updates['buttonIconColor'] = resolveColorToArgb(widget.buttonImageAsset!.color, context);
+        }
+        if (widget.buttonImageAsset!.mode != null) {
+          updates['buttonIconRenderingMode'] = widget.buttonImageAsset!.mode!.name;
+        }
+        if (widget.buttonImageAsset!.gradient != null) {
+          updates['buttonIconGradientEnabled'] = widget.buttonImageAsset!.gradient;
+        }
+      } else {
+        // Fallback to SF Symbol
+        if (_lastIconName != iconName && iconName != null) {
+          updates['buttonIconName'] = iconName;
+          _lastIconName = iconName;
+        }
+        if (_lastIconSize != iconSize && iconSize != null) {
+          updates['buttonIconSize'] = iconSize;
+          _lastIconSize = iconSize;
+        }
+        if (_lastIconColor != iconColor && iconColor != null) {
+          updates['buttonIconColor'] = iconColor;
+          _lastIconColor = iconColor;
+        }
+        if (widget.buttonIcon?.mode != null) {
+          updates['buttonIconRenderingMode'] = widget.buttonIcon!.mode!.name;
+        }
+        if (widget.buttonIcon?.paletteColors != null) {
+          updates['buttonIconPaletteColors'] = widget.buttonIcon!.paletteColors!
+              .map((c) => resolveColorToArgb(c, context))
+              .toList();
+        }
+        if (widget.buttonIcon?.gradient != null) {
+          updates['buttonIconGradientEnabled'] = widget.buttonIcon!.gradient;
+        }
       }
-      if (_lastIconSize != iconSize && iconSize != null) {
-        updates['buttonIconSize'] = iconSize;
-        _lastIconSize = iconSize;
-      }
-      if (_lastIconColor != iconColor && iconColor != null) {
-        updates['buttonIconColor'] = iconColor;
-        _lastIconColor = iconColor;
-      }
-      if (widget.buttonIcon?.mode != null) {
-        updates['buttonIconRenderingMode'] = widget.buttonIcon!.mode!.name;
-      }
-      if (widget.buttonIcon?.paletteColors != null) {
-        updates['buttonIconPaletteColors'] = widget.buttonIcon!.paletteColors!
-            .map((c) => resolveColorToArgb(c, context))
-            .toList();
-      }
-      if (widget.buttonIcon?.gradient != null) {
-        updates['buttonIconGradientEnabled'] = widget.buttonIcon!.gradient;
-      }
+      
       if (updates.isNotEmpty) {
         await ch.invokeMethod('setButtonIcon', updates);
       }
@@ -608,6 +645,9 @@ class _CNPopupMenuButtonState extends State<CNPopupMenuButton> {
       'sfSymbolRenderingModes': updModes,
       'sfSymbolPaletteColors': updPalettes,
       'sfSymbolGradientEnabled': updGradients,
+      'imageAssetPaths': updImageAssetPaths,
+      'imageAssetData': updImageAssetData,
+      'imageAssetFormats': updImageAssetFormats,
     });
   }
 

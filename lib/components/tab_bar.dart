@@ -65,6 +65,10 @@ class CNTabBarItem {
 /// A Cupertino-native tab bar. Uses native UITabBar/NSTabView style visuals.
 class CNTabBar extends StatefulWidget {
   /// Creates a Cupertino-native tab bar.
+  /// 
+  /// According to Apple's Human Interface Guidelines, tab bars should contain
+  /// 3-5 tabs for optimal usability. More than 5 tabs can make the interface
+  /// cluttered and reduce tappability.
   const CNTabBar({
     super.key,
     required this.items,
@@ -77,8 +81,11 @@ class CNTabBar extends StatefulWidget {
     this.split = false,
     this.rightCount = 1,
     this.shrinkCentered = true,
-    this.splitSpacing = 8.0,
-  });
+    this.splitSpacing = 12.0, // Apple's recommended spacing for visual separation
+  }) : assert(items.length >= 2, 'Tab bar must have at least 2 items'),
+       assert(items.length <= 5, 'Tab bar should have 5 or fewer items for optimal usability'),
+       assert(rightCount >= 1, 'Right count must be at least 1'),
+       assert(rightCount < items.length, 'Right count must be less than total items');
 
   /// Items to display in the tab bar.
   final List<CNTabBarItem> items;
@@ -102,14 +109,22 @@ class CNTabBar extends StatefulWidget {
   final double? height;
 
   /// When true, splits items between left and right sections.
+  /// 
+  /// This follows Apple's HIG guidelines for organizing related tab functions
+  /// into logical groups with clear visual separation.
   final bool split;
 
   /// How many trailing items to pin right when [split] is true.
+  /// 
+  /// Must be less than the total number of items. Follows Apple's HIG
+  /// recommendation for maintaining balanced visual hierarchy.
   final int rightCount; // how many trailing items to pin right when split
   /// When true, centers the split groups more tightly.
   final bool shrinkCentered;
 
   /// Gap between left/right halves when split.
+  /// 
+  /// Defaults to 12pt following Apple's HIG recommendations for visual separation.
   final double splitSpacing; // gap between left/right halves when split
 
   @override
@@ -381,6 +396,14 @@ class _CNTabBarState extends State<CNTabBar> {
       final customIconBytes = iconBytes[0];
       final activeCustomIconBytes = iconBytes[1];
       
+      // Extract imageAsset properties
+      final imageAssetPaths = widget.items.map((e) => e.imageAsset?.assetPath ?? '').toList();
+      final activeImageAssetPaths = widget.items.map((e) => e.activeImageAsset?.assetPath ?? '').toList();
+      final imageAssetData = widget.items.map((e) => e.imageAsset?.imageData).toList();
+      final activeImageAssetData = widget.items.map((e) => e.activeImageAsset?.imageData).toList();
+      final imageAssetFormats = widget.items.map((e) => e.imageAsset?.imageFormat ?? '').toList();
+      final activeImageAssetFormats = widget.items.map((e) => e.activeImageAsset?.imageFormat ?? '').toList();
+      
       await ch.invokeMethod('setItems', {
         'labels': labels,
         'sfSymbols': symbols,
@@ -388,6 +411,12 @@ class _CNTabBarState extends State<CNTabBar> {
         'badges': badges,
         'customIconBytes': customIconBytes,
         'activeCustomIconBytes': activeCustomIconBytes,
+        'imageAssetPaths': imageAssetPaths,
+        'activeImageAssetPaths': activeImageAssetPaths,
+        'imageAssetData': imageAssetData,
+        'activeImageAssetData': activeImageAssetData,
+        'imageAssetFormats': imageAssetFormats,
+        'activeImageAssetFormats': activeImageAssetFormats,
         'iconScale': iconScale,
         'selectedIndex': widget.currentIndex,
       });

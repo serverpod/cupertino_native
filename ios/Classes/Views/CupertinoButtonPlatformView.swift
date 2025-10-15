@@ -172,7 +172,8 @@ class CupertinoButtonPlatformView: NSObject, FlutterPlatformView {
           // Priority: imageAsset > customIconBytes > SF Symbol
           // Handle imageAsset properties first
           if let assetPath = args["buttonAssetPath"] as? String, !assetPath.isEmpty {
-            image = Self.loadFlutterAsset(assetPath)
+            let size = CGSize(width: args["buttonIconSize"] as? CGFloat ?? 20, height: args["buttonIconSize"] as? CGFloat ?? 20)
+            image = SVGImageLoader.shared.loadSVG(from: assetPath, size: size)
           } else if let imageData = args["buttonImageData"] as? FlutterStandardTypedData {
             let format = args["buttonImageFormat"] as? String
             image = Self.createImageFromData(imageData.data, format: format, scale: UIScreen.main.scale)

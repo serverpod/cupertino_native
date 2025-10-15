@@ -11,6 +11,7 @@ class PopupMenuButtonDemoPage extends StatefulWidget {
 
 class _PopupMenuButtonDemoPageState extends State<PopupMenuButtonDemoPage> {
   int? _lastSelected;
+  bool _useAlternateSvgIcons = false;
 
   @override
   Widget build(BuildContext context) {
@@ -74,40 +75,68 @@ class _PopupMenuButtonDemoPageState extends State<PopupMenuButtonDemoPage> {
     final svgItems = [
       CNPopupMenuItem(
         label: 'Home',
-        imageAsset: const CNImageAsset('assets/icons/home.svg', size: 18),
+        imageAsset: CNImageAsset(
+          _useAlternateSvgIcons ? 'assets/icons/profile.svg' : 'assets/icons/home.svg', 
+          size: 18
+        ),
       ),
       CNPopupMenuItem(
         label: 'Search',
-        imageAsset: const CNImageAsset('assets/icons/search.svg', size: 18),
+        imageAsset: CNImageAsset(
+          _useAlternateSvgIcons ? 'assets/icons/chat.svg' : 'assets/icons/search.svg', 
+          size: 18
+        ),
       ),
       const CNPopupMenuDivider(),
       CNPopupMenuItem(
         label: 'Profile',
-        imageAsset: const CNImageAsset('assets/icons/profile.svg', size: 18),
+        imageAsset: CNImageAsset(
+          _useAlternateSvgIcons ? 'assets/icons/home.svg' : 'assets/icons/profile.svg', 
+          size: 18
+        ),
       ),
       CNPopupMenuItem(
         label: 'Chat',
-        imageAsset: const CNImageAsset('assets/icons/chat.svg', size: 18),
+        imageAsset: CNImageAsset(
+          _useAlternateSvgIcons ? 'assets/icons/search.svg' : 'assets/icons/chat.svg', 
+          size: 18
+        ),
       ),
     ];
 
     final coloredSvgItems = [
       CNPopupMenuItem(
         label: 'Home',
-        imageAsset: const CNImageAsset('assets/icons/home.svg', size: 18, color: CupertinoColors.systemBlue),
+        imageAsset: CNImageAsset(
+          _useAlternateSvgIcons ? 'assets/icons/profile.svg' : 'assets/icons/home.svg', 
+          size: 18, 
+          color: CupertinoColors.systemBlue
+        ),
       ),
       CNPopupMenuItem(
         label: 'Search',
-        imageAsset: const CNImageAsset('assets/icons/search.svg', size: 18, color: CupertinoColors.systemGreen),
+        imageAsset: CNImageAsset(
+          _useAlternateSvgIcons ? 'assets/icons/chat.svg' : 'assets/icons/search.svg', 
+          size: 18, 
+          color: CupertinoColors.systemGreen
+        ),
       ),
       const CNPopupMenuDivider(),
       CNPopupMenuItem(
         label: 'Profile',
-        imageAsset: const CNImageAsset('assets/icons/profile.svg', size: 18, color: CupertinoColors.systemPurple),
+        imageAsset: CNImageAsset(
+          _useAlternateSvgIcons ? 'assets/icons/home.svg' : 'assets/icons/profile.svg', 
+          size: 18, 
+          color: CupertinoColors.systemPurple
+        ),
       ),
       CNPopupMenuItem(
         label: 'Chat',
-        imageAsset: const CNImageAsset('assets/icons/chat.svg', size: 18, color: CupertinoColors.systemRed),
+        imageAsset: CNImageAsset(
+          _useAlternateSvgIcons ? 'assets/icons/search.svg' : 'assets/icons/chat.svg', 
+          size: 18, 
+          color: CupertinoColors.systemRed
+        ),
       ),
     ];
 
@@ -188,13 +217,40 @@ class _PopupMenuButtonDemoPageState extends State<PopupMenuButtonDemoPage> {
             ),
             const SizedBox(height: 24),
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('SVG menu items'),
+                CupertinoButton(
+                  onPressed: () {
+                    setState(() {
+                      _useAlternateSvgIcons = !_useAlternateSvgIcons;
+                    });
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: CupertinoColors.systemBlue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: CupertinoColors.systemBlue.withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      _useAlternateSvgIcons ? 'Reset' : 'Switch',
+                      style: const TextStyle(fontSize: 12, color: CupertinoColors.systemBlue),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('SVG menu items'),
-                Spacer(),
                 CNPopupMenuButton.icon(
                   buttonIcon: const CNSymbol('ellipsis', size: 18),
-                  buttonImageAsset: const CNImageAsset('assets/icons/home.svg', size: 18),
+                  buttonImageAsset: CNImageAsset(
+                    _useAlternateSvgIcons ? 'assets/icons/profile.svg' : 'assets/icons/home.svg', 
+                    size: 18
+                  ),
                   size: 44,
                   items: svgItems,
                   onSelected: (index) {
@@ -212,7 +268,11 @@ class _PopupMenuButtonDemoPageState extends State<PopupMenuButtonDemoPage> {
                 Spacer(),
                 CNPopupMenuButton.icon(
                   buttonIcon: const CNSymbol('ellipsis', size: 18),
-                  buttonImageAsset: const CNImageAsset('assets/icons/search.svg', size: 18, color: CupertinoColors.systemBlue),
+                  buttonImageAsset: CNImageAsset(
+                    _useAlternateSvgIcons ? 'assets/icons/chat.svg' : 'assets/icons/search.svg', 
+                    size: 18, 
+                    color: CupertinoColors.systemBlue
+                  ),
                   size: 44,
                   items: coloredSvgItems,
                   onSelected: (index) {
