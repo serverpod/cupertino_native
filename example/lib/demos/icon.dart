@@ -146,7 +146,50 @@ class IconDemoPage extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 24),
-            const Text('Custom Icons (PNG/JPG)'),
+            const Text('SVG Image Assets'),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: const [
+                CNIcon(
+                  imageAsset: CNImageAsset('assets/icons/home.svg'),
+                  size: 24,
+                ),
+                CNIcon(
+                  imageAsset: CNImageAsset('assets/icons/search.svg'),
+                  size: 32,
+                ),
+                CNIcon(
+                  imageAsset: CNImageAsset('assets/icons/profile.svg'),
+                  size: 40,
+                ),
+                CNIcon(
+                  imageAsset: CNImageAsset('assets/icons/chat.svg'),
+                  size: 48,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Text('Debug: Testing with SF Symbol fallback', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: const [
+                CNIcon(
+                  symbol: CNSymbol('house.fill'),
+                  imageAsset: CNImageAsset('assets/icons/home.svg'),
+                  size: 24,
+                ),
+                const SizedBox(width: 16),
+                CNIcon(
+                  symbol: CNSymbol('magnifyingglass'),
+                  imageAsset: CNImageAsset('assets/icons/search.svg'),
+                  size: 32,
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            const Text('Custom Icons (IconData)'),
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,

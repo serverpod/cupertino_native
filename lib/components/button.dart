@@ -25,6 +25,7 @@ class CNButton extends StatefulWidget {
     this.style = CNButtonStyle.plain,
   }) : icon = null,
        customIcon = null,
+       imageAsset = null,
        width = null,
        round = false;
 
@@ -33,6 +34,7 @@ class CNButton extends StatefulWidget {
     super.key,
     required this.icon,
     this.customIcon,
+    this.imageAsset,
     this.onPressed,
     this.enabled = true,
     this.tint,
@@ -48,11 +50,14 @@ class CNButton extends StatefulWidget {
   /// Button text (null in icon mode).
   final String? label; // null in icon mode
   /// Button icon (non-null in icon mode).
-  /// If both [icon] and [customIcon] are provided, [customIcon] takes precedence.
+  /// Priority: [imageAsset] > [customIcon] > [icon]
   final CNSymbol? icon; // non-null in icon mode
   /// Optional custom icon from CupertinoIcons, Icons, or any IconData.
-  /// If provided, this takes precedence over [icon].
+  /// If provided, this takes precedence over [icon] but not [imageAsset].
   final IconData? customIcon;
+  /// Optional image asset (SVG, PNG, etc.) for the button icon.
+  /// If provided, this takes precedence over [icon] and [customIcon].
+  final CNImageAsset? imageAsset;
   /// Callback when pressed.
   final VoidCallback? onPressed;
 
@@ -143,7 +148,14 @@ class _CNButtonState extends State<CNButton> {
       );
     }
 
-    // Render custom icon if needed
+    // Priority: imageAsset > customIcon > icon
+    
+    // Handle image asset (highest priority)
+    if (widget.imageAsset != null) {
+      return _buildNativeButton(context, imageAsset: widget.imageAsset);
+    }
+    
+    // Handle custom icon (medium priority)
     if (widget.customIcon != null) {
       return FutureBuilder<Uint8List?>(
         future: iconDataToImageBytes(widget.customIcon!, size: widget.icon?.size ?? 20.0),
@@ -156,28 +168,73 @@ class _CNButtonState extends State<CNButton> {
       );
     }
     
+    // Handle SF Symbol (lowest priority)
     return _buildNativeButton(context, customIconBytes: null);
   }
 
-  Widget _buildNativeButton(BuildContext context, {Uint8List? customIconBytes}) {
+  Widget _buildNativeButton(BuildContext context, {Uint8List? customIconBytes, CNImageAsset? imageAsset}) {
     const viewType = 'CupertinoNativeButton';
+
+    // Determine which source to use and build parameters accordingly
+    String iconName = '';
+    Uint8List? imageData;
+    String? imageFormat;
+    String? assetPath;
+    double iconSize = 20.0;
+    Color? iconColor;
+    CNSymbolRenderingMode? iconMode;
+    bool? iconGradient;
+    List<Color>? paletteColors;
+
+    if (imageAsset != null) {
+      // Image asset takes precedence
+      assetPath = imageAsset.assetPath;
+      imageData = imageAsset.imageData;
+      imageFormat = imageAsset.imageFormat;
+      iconSize = imageAsset.size;
+      iconColor = imageAsset.color;
+      iconMode = imageAsset.mode;
+      iconGradient = imageAsset.gradient;
+    } else if (customIconBytes != null) {
+      // Custom icon bytes
+      imageData = customIconBytes;
+      imageFormat = 'png'; // IconData is rendered as PNG
+      iconSize = widget.icon?.size ?? 20.0;
+      iconColor = widget.icon?.color;
+      iconMode = widget.icon?.mode;
+      iconGradient = widget.icon?.gradient;
+      paletteColors = widget.icon?.paletteColors;
+    } else if (widget.icon != null) {
+      // SF Symbol
+      iconName = widget.icon!.name;
+      iconSize = widget.icon!.size;
+      iconColor = widget.icon!.color;
+      iconMode = widget.icon!.mode;
+      iconGradient = widget.icon!.gradient;
+      paletteColors = widget.icon!.paletteColors;
+    }
 
     final creationParams = <String, dynamic>{
       if (widget.label != null) 'buttonTitle': widget.label,
       if (customIconBytes != null)
         'buttonCustomIconBytes': customIconBytes,
-      if (widget.icon != null) 'buttonIconName': widget.icon!.name,
-      if (widget.icon?.size != null) 'buttonIconSize': widget.icon!.size,
-      if (widget.icon?.color != null)
-        'buttonIconColor': resolveColorToArgb(widget.icon!.color, context),
-      if (widget.icon?.mode != null)
-        'buttonIconRenderingMode': widget.icon!.mode!.name,
-      if (widget.icon?.paletteColors != null)
-        'buttonIconPaletteColors': widget.icon!.paletteColors!
+      if (imageAsset != null) ...{
+        if (assetPath != null) 'buttonAssetPath': assetPath,
+        if (imageData != null) 'buttonImageData': imageData,
+        if (imageFormat != null) 'buttonImageFormat': imageFormat,
+      },
+      if (iconName.isNotEmpty) 'buttonIconName': iconName,
+      'buttonIconSize': iconSize,
+      if (iconColor != null)
+        'buttonIconColor': resolveColorToArgb(iconColor, context),
+      if (iconMode != null)
+        'buttonIconRenderingMode': iconMode.name,
+      if (paletteColors != null)
+        'buttonIconPaletteColors': paletteColors
             .map((c) => resolveColorToArgb(c, context))
             .toList(),
-      if (widget.icon?.gradient != null)
-        'buttonIconGradientEnabled': widget.icon!.gradient,
+      if (iconGradient != null)
+        'buttonIconGradientEnabled': iconGradient,
       if (widget.isIcon) 'round': true,
       'buttonStyle': widget.style.name,
       'enabled': (widget.enabled && widget.onPressed != null),

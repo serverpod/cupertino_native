@@ -1,5 +1,6 @@
 import Flutter
 import UIKit
+import SVGKit
 
 class CupertinoIconPlatformView: NSObject, FlutterPlatformView {
   private let channel: FlutterMethodChannel
@@ -8,6 +9,9 @@ class CupertinoIconPlatformView: NSObject, FlutterPlatformView {
 
   private var name: String = ""
   private var customIconBytes: Data?
+  private var assetPath: String?
+  private var imageData: Data?
+  private var imageFormat: String?
   private var iconScale: CGFloat = UIScreen.main.scale
   private var isDark: Bool = false
   private var size: CGFloat?
@@ -26,6 +30,11 @@ class CupertinoIconPlatformView: NSObject, FlutterPlatformView {
       if let data = dict["customIconBytes"] as? FlutterStandardTypedData {
         self.customIconBytes = data.data
       }
+      if let path = dict["assetPath"] as? String { self.assetPath = path }
+      if let data = dict["imageData"] as? FlutterStandardTypedData {
+        self.imageData = data.data
+      }
+      if let format = dict["imageFormat"] as? String { self.imageFormat = format }
       if let b = dict["isDark"] as? NSNumber { self.isDark = b.boolValue }
       if let style = dict["style"] as? [String: Any] {
         if let v = style["iconSize"] as? NSNumber { self.size = CGFloat(truncating: v) }
@@ -97,14 +106,25 @@ class CupertinoIconPlatformView: NSObject, FlutterPlatformView {
 
   private func rebuild() {
     var img: UIImage? = nil
-    // Custom icon bytes take precedence over SF Symbol
-    if let data = customIconBytes {
+    
+    // Priority: imageData > assetPath > customIconBytes > SF Symbol
+    if let data = imageData {
+      // Raw image data (PNG, SVG, etc.)
+      img = Self.createImageFromData(data, format: imageFormat, scale: iconScale)
+    } else if let path = assetPath {
+      // Flutter asset path
+      img = Self.loadFlutterAsset(path)
+    } else if let data = customIconBytes {
+      // Legacy custom icon bytes (PNG from IconData)
       img = UIImage(data: data, scale: self.iconScale)?.withRenderingMode(.alwaysTemplate)
-    } else {
+    } else if !name.isEmpty {
+      // SF Symbol
       img = UIImage(systemName: name)
     }
+    
     guard var image = img else { imageView.image = nil; return }
 
+    // Apply size configuration
     if let s = size {
       let cfg = UIImage.SymbolConfiguration(pointSize: s)
       if let newImg = image.applyingSymbolConfiguration(cfg) { image = newImg }
@@ -166,10 +186,23 @@ class CupertinoIconPlatformView: NSObject, FlutterPlatformView {
   }
 
   private static func loadFlutterAsset(_ assetPath: String) -> UIImage? {
-    let flutterKey = FlutterDartProject.lookupKey(forAsset: assetPath)
-    guard let path = Bundle.main.path(forResource: flutterKey, ofType: nil) else {
-      return nil
+    return SVGImageLoader.shared.loadSVG(from: assetPath)
+  }
+
+  private static func createImageFromData(_ data: Data, format: String?, scale: CGFloat) -> UIImage? {
+    guard let format = format?.lowercased() else {
+      // Try to detect format from data or default to PNG
+      return UIImage(data: data, scale: scale)
     }
-    return UIImage(contentsOfFile: path)
+
+    switch format {
+    case "png", "jpg", "jpeg":
+      return UIImage(data: data, scale: scale)
+    case "svg":
+      return SVGImageLoader.shared.loadSVG(from: data)
+    default:
+      // Try as generic image data
+      return UIImage(data: data, scale: scale)
+    }
   }
 }

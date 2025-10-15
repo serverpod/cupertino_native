@@ -57,27 +57,28 @@ class _TabBarDemoPageState extends State<TabBarDemoPage>
               items: [
                 CNTabBarItem(
                   label: 'Home',
-                  // Custom IconData from CupertinoIcons
-                  customIcon: CupertinoIcons.house,
-                  activeCustomIcon: CupertinoIcons.house_fill,
+                  // Using SVG assets from assets/icons/
+                  imageAsset: CNImageAsset('assets/icons/home.svg'),
+                  activeImageAsset: CNImageAsset('assets/icons/home_filled.svg'),
                   badge: '3',
                 ),
                 CNTabBarItem(
-                  label: 'Profile',
-                  icon: CNSymbol('person.crop.circle'), // SF Symbol
-                  activeIcon: CNSymbol(
-                    'person.crop.circle.fill',
-                  ), // SF Symbol (filled)
+                  label: 'Search',
+                  // Using SVG assets
+                  imageAsset: CNImageAsset('assets/icons/search.svg'),
+                  activeImageAsset: CNImageAsset('assets/icons/search-filled.svg'),
                   badge: '12',
                 ),
                 CNTabBarItem(
-                  label: 'Settings',
-                  // Custom IconData from Icons (Material)
-                  customIcon: Icons.settings,
-                  activeCustomIcon: Icons.settings,
+                  label: 'Profile',
+                  // Using SVG assets
+                  imageAsset: CNImageAsset('assets/icons/profile.svg'),
+                  activeImageAsset: CNImageAsset('assets/icons/profile-filled.svg'),
                 ),
                 CNTabBarItem(
-                  icon: CNSymbol('magnifyingglass'), // Icon-only (circular)
+                  // Icon-only tab using SVG
+                  imageAsset: CNImageAsset('assets/icons/chat.svg'),
+                  activeImageAsset: CNImageAsset('assets/icons/chat-filled.svg'),
                 ),
               ],
               currentIndex: _index,

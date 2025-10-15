@@ -29,6 +29,8 @@ Ensure your platform minimums are compatible:
 - iOS `platform :ios, '14.0'`
 - macOS 11.0+
 
+**Note:** This package includes SVGKit dependency for native SVG rendering support.
+
 You will also need to install the Xcode 26 beta and use `xcode-select` to set it as your default.
 
 ```bash
@@ -153,15 +155,191 @@ CNTabBar(
 )
 ```
 
-## What's left to do?
-So far, this is more of a proof of concept than a full package (although the included components do work). Future improvements include:
+## Custom Icons & SVG Support
 
-- Cleaning up the code. Probably by someone who knows a bit about Swift.
-- Adding more native components.
-- Reviewing the Flutter APIs to ensure consistency and eliminate redundancies.
-- Extending the flexibility and styling options of the widgets.
-- Investigate how to best combine scroll views with the native components.
-- macOS compiles and runs, but it's untested with Liquid Glass and generally doesn't look great.
+This package supports three types of icons with a unified priority system: **SVG Assets** > **Custom Icons** > **SF Symbols**.
+
+### SVG Image Assets
+
+Render custom SVG icons natively using SVGKit with full color and size customization:
+
+```dart
+// SVG icon from assets
+const CNIcon(
+  imageAsset: CNImageAsset('assets/icons/home.svg', size: 24),
+)
+
+// SVG with custom color
+const CNIcon(
+  imageAsset: CNImageAsset(
+    'assets/icons/search.svg', 
+    size: 32,
+    color: CupertinoColors.systemBlue,
+  ),
+)
+
+// SVG in tab bar
+CNTabBar(
+  items: const [
+    CNTabBarItem(
+      label: 'Home',
+      imageAsset: CNImageAsset('assets/icons/home.svg'),
+      activeImageAsset: CNImageAsset('assets/icons/home-filled.svg'),
+    ),
+    CNTabBarItem(
+      label: 'Search',
+      imageAsset: CNImageAsset('assets/icons/search.svg'),
+    ),
+  ],
+  currentIndex: _tabIndex,
+  onTap: (i) => setState(() => _tabIndex = i),
+)
+
+// SVG in buttons
+CNButton.icon(
+  imageAsset: const CNImageAsset('assets/icons/heart.svg', size: 18),
+  onPressed: () {},
+)
+
+// SVG in popup menus
+CNPopupMenuButton.icon(
+  buttonImageAsset: const CNImageAsset('assets/icons/menu.svg', size: 18),
+  items: const [
+    CNPopupMenuItem(
+      label: 'Home',
+      imageAsset: CNImageAsset('assets/icons/home.svg', size: 18),
+    ),
+    CNPopupMenuItem(
+      label: 'Search',
+      imageAsset: CNImageAsset('assets/icons/search.svg', size: 18),
+    ),
+  ],
+  onSelected: (index) {},
+)
+```
+
+### Custom Icons (IconData)
+
+Use any Flutter `IconData` including CupertinoIcons, Material Icons, or custom font icons:
+
+```dart
+// Custom icon from CupertinoIcons
+const CNIcon(
+  customIcon: CupertinoIcons.home,
+  size: 24,
+)
+
+// Custom icon in tab bar
+CNTabBar(
+  items: const [
+    CNTabBarItem(
+      label: 'Home',
+      customIcon: CupertinoIcons.home,
+      activeCustomIcon: CupertinoIcons.home_fill,
+    ),
+    CNTabBarItem(
+      label: 'Profile',
+      customIcon: CupertinoIcons.person,
+    ),
+  ],
+  currentIndex: _tabIndex,
+  onTap: (i) => setState(() => _tabIndex = i),
+)
+
+// Custom icon in buttons
+CNButton.icon(
+  customIcon: CupertinoIcons.heart_fill,
+  onPressed: () {},
+)
+
+// Custom icon in popup menus
+CNPopupMenuButton.icon(
+  buttonCustomIcon: CupertinoIcons.ellipsis_circle,
+  items: const [
+    CNPopupMenuItem(
+      label: 'Home',
+      customIcon: CupertinoIcons.home,
+    ),
+    CNPopupMenuItem(
+      label: 'Settings',
+      customIcon: CupertinoIcons.settings,
+    ),
+  ],
+  onSelected: (index) {},
+)
+```
+
+### SF Symbols (Default)
+
+Native SF Symbols with full rendering mode support:
+
+```dart
+// Monochrome symbol
+const CNIcon(symbol: CNSymbol('star'));
+
+// Hierarchical symbol
+const CNIcon(
+  symbol: CNSymbol('paintpalette.fill'),
+  mode: CNSymbolRenderingMode.hierarchical,
+)
+
+// Multicolor symbol
+const CNIcon(
+  symbol: CNSymbol('paintpalette.fill'),
+  mode: CNSymbolRenderingMode.multicolor,
+)
+```
+
+### Icon Priority System
+
+All components follow the same priority order:
+
+1. **`imageAsset`** - SVG/PNG assets (highest priority)
+2. **`customIcon`** - Flutter IconData (medium priority)  
+3. **`symbol`** - SF Symbols (lowest priority)
+
+```dart
+// This will use the SVG, ignoring the customIcon and symbol
+const CNIcon(
+  symbol: CNSymbol('house.fill'),
+  customIcon: CupertinoIcons.home,
+  imageAsset: CNImageAsset('assets/icons/home.svg'),
+)
+```
+
+### Badge Support
+
+Display notification badges on tab bar items (iOS only):
+
+```dart
+CNTabBar(
+  items: const [
+    CNTabBarItem(
+      label: 'Home',
+      icon: CNSymbol('house.fill'),
+      badge: '3', // Red badge with "3"
+    ),
+    CNTabBarItem(
+      label: 'Messages',
+      icon: CNSymbol('message.fill'),
+      badge: '12',
+    ),
+  ],
+  currentIndex: _tabIndex,
+  onTap: (i) => setState(() => _tabIndex = i),
+)
+```
+
+## What's left to do?
+This package has evolved significantly and now provides comprehensive native widget support. Future improvements include:
+
+- Adding more native components (DatePicker, ActionSheet, etc.)
+- Extending SVG support to remaining components (SegmentedControl, Slider, Switch)
+- Reviewing the Flutter APIs to ensure consistency and eliminate redundancies
+- Extending the flexibility and styling options of the widgets
+- Investigate how to best combine scroll views with the native components
+- macOS compiles and runs, but it's untested with Liquid Glass and generally doesn't look great
+- Performance optimizations for SVG rendering and caching
 
 ## How was this done?
 Pretty much vibe-coded with Codex and GPT-5. 😅

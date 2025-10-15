@@ -11,6 +11,9 @@ class CupertinoPopupMenuButtonPlatformView: NSObject, FlutterPlatformView {
   private var symbols: [String] = []
   private var customIconBytes: [Data?] = []
   private var customIconColors: [Any] = []
+  private var imageAssetPaths: [String] = []
+  private var imageAssetData: [Data?] = []
+  private var imageAssetFormats: [String] = []
   private var dividers: [Bool] = []
   private var enabled: [Bool] = []
   private var itemSizes: [Any] = []
@@ -22,6 +25,9 @@ class CupertinoPopupMenuButtonPlatformView: NSObject, FlutterPlatformView {
   // Track current button icon configuration to keep image across state updates
   private var btnIconName: String? = nil
   private var btnCustomIconBytes: Data? = nil
+  private var btnAssetPath: String? = nil
+  private var btnImageData: Data? = nil
+  private var btnImageFormat: String? = nil
   private var btnIconSize: CGFloat? = nil
   private var btnIconColor: UIColor? = nil
   private var btnIconMode: String? = nil
@@ -58,6 +64,11 @@ class CupertinoPopupMenuButtonPlatformView: NSObject, FlutterPlatformView {
       if let data = dict["buttonCustomIconBytes"] as? FlutterStandardTypedData {
         buttonCustomIconBytes = data.data
       }
+      if let ap = dict["buttonAssetPath"] as? String { btnAssetPath = ap }
+      if let data = dict["buttonImageData"] as? FlutterStandardTypedData {
+        btnImageData = data.data
+      }
+      if let f = dict["buttonImageFormat"] as? String { btnImageFormat = f }
       if let s = dict["buttonIconName"] as? String { iconName = s }
       if let s = dict["buttonIconSize"] as? NSNumber { iconSize = CGFloat(truncating: s) }
       if let c = dict["buttonIconColor"] as? NSNumber { iconColor = Self.colorFromARGB(c.intValue) }
@@ -71,6 +82,11 @@ class CupertinoPopupMenuButtonPlatformView: NSObject, FlutterPlatformView {
         customIconBytes = bytesArray.map { $0?.data }
       }
       customIconColors = (dict["customIconColors"] as? [Any]) ?? []
+      imageAssetPaths = (dict["imageAssetPaths"] as? [String]) ?? []
+      if let bytesArray = dict["imageAssetData"] as? [FlutterStandardTypedData?] {
+        imageAssetData = bytesArray.map { $0?.data }
+      }
+      imageAssetFormats = (dict["imageAssetFormats"] as? [String]) ?? []
       dividers = (dict["isDivider"] as? [NSNumber]) ?? []
       enabled = (dict["enabled"] as? [NSNumber]) ?? []
       sizes = (dict["sfSymbolSizes"] as? [Any]) ?? []
@@ -251,8 +267,19 @@ class CupertinoPopupMenuButtonPlatformView: NSObject, FlutterPlatformView {
         if isDiv { flushGroup(); continue }
         let title = i < labels.count ? labels[i] : ""
         var image: UIImage? = nil
-        // Custom icon bytes take precedence
-        if i < self.customIconBytes.count, let data = self.customIconBytes[i] {
+        // Priority: imageAsset > customIconBytes > SF Symbol
+        
+        // Handle imageAsset (highest priority)
+        if i < self.imageAssetPaths.count, !self.imageAssetPaths[i].isEmpty {
+          image = SVGImageLoader.shared.loadSVG(from: self.imageAssetPaths[i], size: CGSize(width: 18, height: 18))
+        } else if i < self.imageAssetData.count, let data = self.imageAssetData[i], 
+                  i < self.imageAssetFormats.count, !self.imageAssetFormats[i].isEmpty {
+          let format = self.imageAssetFormats[i]
+          image = Self.createImageFromData(data, format: format, scale: self.iconScale)
+        }
+        
+        // Handle custom icon bytes (medium priority)
+        if image == nil, i < self.customIconBytes.count, let data = self.customIconBytes[i] {
           image = UIImage(data: data, scale: self.iconScale)?.withRenderingMode(.alwaysTemplate)
           // Apply tint color to custom icon if provided
           if i < self.customIconColors.count, 
@@ -261,7 +288,10 @@ class CupertinoPopupMenuButtonPlatformView: NSObject, FlutterPlatformView {
             let tintColor = Self.colorFromARGB(colorNum.intValue)
             image = image?.withTintColor(tintColor, renderingMode: .alwaysOriginal)
           }
-        } else if i < symbols.count, !symbols[i].isEmpty {
+        }
+        
+        // Handle SF Symbol (lowest priority)
+        if image == nil, i < symbols.count, !symbols[i].isEmpty {
           image = UIImage(systemName: symbols[i])
         }
         if let sizes = defaultSizes, i < sizes.count,
@@ -393,9 +423,21 @@ class CupertinoPopupMenuButtonPlatformView: NSObject, FlutterPlatformView {
 
   @available(iOS 13.0, *)
   private func makeButtonIconImage() -> UIImage? {
+    // Priority: imageAsset > customIconBytes > SF Symbol
+    
+    // Handle imageAsset (highest priority)
+    if let path = btnAssetPath, !path.isEmpty {
+      return SVGImageLoader.shared.loadSVG(from: path, size: CGSize(width: btnIconSize ?? 20, height: btnIconSize ?? 20))
+    } else if let data = btnImageData, let format = btnImageFormat {
+      return Self.createImageFromData(data, format: format, scale: iconScale)
+    }
+    
+    // Handle custom icon bytes (medium priority)
     if let data = btnCustomIconBytes {
       return UIImage(data: data, scale: self.iconScale)?.withRenderingMode(.alwaysTemplate)
     }
+    
+    // Handle SF Symbol (lowest priority)
     guard let name = btnIconName, var image = UIImage(systemName: name) else { return nil }
     if let sz = btnIconSize {
       image = image.applyingSymbolConfiguration(UIImage.SymbolConfiguration(pointSize: sz)) ?? image
@@ -522,5 +564,22 @@ class CupertinoPopupMenuButtonPlatformView: NSObject, FlutterPlatformView {
       return nil
     }
     return UIImage(contentsOfFile: path)
+  }
+
+  private static func createImageFromData(_ data: Data, format: String?, scale: CGFloat) -> UIImage? {
+    guard let format = format?.lowercased() else {
+      // Try to detect format from data or default to PNG
+      return UIImage(data: data, scale: scale)
+    }
+    
+    switch format {
+    case "png", "jpg", "jpeg":
+      return UIImage(data: data, scale: scale)
+    case "svg":
+      return SVGImageLoader.shared.loadSVG(from: data)
+    default:
+      // Try as generic image data
+      return UIImage(data: data, scale: scale)
+    }
   }
 }

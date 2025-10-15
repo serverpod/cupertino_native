@@ -16,6 +16,8 @@ class CNTabBarItem {
     this.badge,
     this.customIcon,
     this.activeCustomIcon,
+    this.imageAsset,
+    this.activeImageAsset,
   });
 
   /// Optional tab item label.
@@ -49,6 +51,15 @@ class CNTabBarItem {
   /// Optional custom icon for selected state.
   /// If not provided, [customIcon] is used for both states.
   final IconData? activeCustomIcon;
+
+  /// Optional image asset for unselected state.
+  /// If provided, this takes precedence over [icon] and [customIcon].
+  /// Priority: [imageAsset] > [customIcon] > [icon]
+  final CNImageAsset? imageAsset;
+
+  /// Optional image asset for selected state.
+  /// If not provided, [imageAsset] is used for both states.
+  final CNImageAsset? activeImageAsset;
 }
 
 /// A Cupertino-native tab bar. Uses native UITabBar/NSTabView style visuals.
@@ -193,8 +204,11 @@ class _CNTabBarState extends State<CNTabBar> {
     final activeCustomIconBytes = <Uint8List?>[];
 
     for (final item in widget.items) {
-      // Render custom icon
-      if (item.customIcon != null) {
+      // Priority: imageAsset > customIcon > icon
+      if (item.imageAsset != null) {
+        // For imageAsset, we don't need to render to bytes - native code will handle it
+        customIconBytes.add(null);
+      } else if (item.customIcon != null) {
         final bytes = await iconDataToImageBytes(item.customIcon!, size: 25.0);
         customIconBytes.add(bytes);
       } else {
@@ -202,7 +216,10 @@ class _CNTabBarState extends State<CNTabBar> {
       }
 
       // Render active custom icon
-      if (item.activeCustomIcon != null) {
+      if (item.activeImageAsset != null) {
+        // For activeImageAsset, we don't need to render to bytes - native code will handle it
+        activeCustomIconBytes.add(null);
+      } else if (item.activeCustomIcon != null) {
         final bytes = await iconDataToImageBytes(item.activeCustomIcon!, size: 25.0);
         activeCustomIconBytes.add(bytes);
       } else if (item.customIcon != null) {
@@ -225,11 +242,19 @@ class _CNTabBarState extends State<CNTabBar> {
     final activeSymbols = widget.items.map((e) => e.activeIcon?.name ?? e.icon?.name ?? '').toList();
     final badges = widget.items.map((e) => e.badge ?? '').toList();
     final sizes = widget.items
-        .map((e) => (widget.iconSize ?? e.icon?.size))
+        .map((e) => (widget.iconSize ?? e.icon?.size ?? e.imageAsset?.size))
         .toList();
     final colors = widget.items
-        .map((e) => resolveColorToArgb(e.icon?.color, context))
+        .map((e) => resolveColorToArgb(e.icon?.color ?? e.imageAsset?.color, context))
         .toList();
+    
+    // Extract imageAsset data
+    final imageAssetPaths = widget.items.map((e) => e.imageAsset?.assetPath ?? '').toList();
+    final activeImageAssetPaths = widget.items.map((e) => e.activeImageAsset?.assetPath ?? '').toList();
+    final imageAssetData = widget.items.map((e) => e.imageAsset?.imageData).toList();
+    final activeImageAssetData = widget.items.map((e) => e.activeImageAsset?.imageData).toList();
+    final imageAssetFormats = widget.items.map((e) => e.imageAsset?.imageFormat ?? '').toList();
+    final activeImageAssetFormats = widget.items.map((e) => e.activeImageAsset?.imageFormat ?? '').toList();
 
     final creationParams = <String, dynamic>{
       'labels': labels,
@@ -238,6 +263,12 @@ class _CNTabBarState extends State<CNTabBar> {
       'badges': badges,
       'customIconBytes': customIconBytes,
       'activeCustomIconBytes': activeCustomIconBytes,
+      'imageAssetPaths': imageAssetPaths,
+      'activeImageAssetPaths': activeImageAssetPaths,
+      'imageAssetData': imageAssetData,
+      'activeImageAssetData': activeImageAssetData,
+      'imageAssetFormats': imageAssetFormats,
+      'activeImageAssetFormats': activeImageAssetFormats,
       'iconScale': MediaQuery.of(context).devicePixelRatio, // Pass the scale!
       'sfSymbolSizes': sizes,
       'sfSymbolColors': colors,

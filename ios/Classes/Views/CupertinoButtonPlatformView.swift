@@ -16,6 +16,9 @@ class CupertinoButtonPlatformView: NSObject, FlutterPlatformView {
     var title: String? = nil
     var iconName: String? = nil
     var customIconBytes: Data? = nil
+    var assetPath: String? = nil
+    var imageData: Data? = nil
+    var imageFormat: String? = nil
     var iconSize: CGFloat? = nil
     var iconColor: UIColor? = nil
     var makeRound: Bool = false
@@ -32,6 +35,11 @@ class CupertinoButtonPlatformView: NSObject, FlutterPlatformView {
       if let data = dict["buttonCustomIconBytes"] as? FlutterStandardTypedData {
         customIconBytes = data.data
       }
+      if let ap = dict["buttonAssetPath"] as? String { assetPath = ap }
+      if let data = dict["buttonImageData"] as? FlutterStandardTypedData {
+        imageData = data.data
+      }
+      if let f = dict["buttonImageFormat"] as? String { imageFormat = f }
       if let s = dict["buttonIconName"] as? String { iconName = s }
       if let s = dict["buttonIconSize"] as? NSNumber { iconSize = CGFloat(truncating: s) }
       if let c = dict["buttonIconColor"] as? NSNumber { iconColor = Self.colorFromARGB(c.intValue) }
@@ -67,12 +75,24 @@ class CupertinoButtonPlatformView: NSObject, FlutterPlatformView {
     isEnabled = enabled
 
     var finalImage: UIImage? = nil
-    // Custom icon bytes take precedence over SF Symbol
-    if let data = customIconBytes, var image = UIImage(data: data, scale: iconScale) {
+    // Priority: imageAsset > customIconBytes > SF Symbol
+    
+    // Handle imageAsset (highest priority)
+    if let path = assetPath, !path.isEmpty {
+      finalImage = SVGImageLoader.shared.loadSVG(from: path, size: CGSize(width: iconSize ?? 20, height: iconSize ?? 20))
+    } else if let data = imageData, let format = imageFormat {
+      finalImage = Self.createImageFromData(data, format: format, scale: iconScale)
+    }
+    
+    // Handle custom icon bytes (medium priority)
+    if finalImage == nil, let data = customIconBytes, var image = UIImage(data: data, scale: iconScale) {
       // Apply template rendering mode for tinting
       image = image.withRenderingMode(.alwaysTemplate)
       finalImage = image
-    } else if let name = iconName, var image = UIImage(systemName: name) {
+    }
+    
+    // Handle SF Symbol (lowest priority)
+    if finalImage == nil, let name = iconName, var image = UIImage(systemName: name) {
       if let sz = iconSize { image = image.applyingSymbolConfiguration(UIImage.SymbolConfiguration(pointSize: sz)) ?? image }
       if let mode = iconMode {
         switch mode {
@@ -287,6 +307,23 @@ class CupertinoButtonPlatformView: NSObject, FlutterPlatformView {
       if iconOnly {
         button.contentEdgeInsets = UIEdgeInsets(top: 2, left: 2, bottom: 2, right: 2)
       }
+    }
+  }
+
+  private static func createImageFromData(_ data: Data, format: String?, scale: CGFloat) -> UIImage? {
+    guard let format = format?.lowercased() else {
+      // Try to detect format from data or default to PNG
+      return UIImage(data: data, scale: scale)
+    }
+    
+    switch format {
+    case "png", "jpg", "jpeg":
+      return UIImage(data: data, scale: scale)
+    case "svg":
+      return SVGImageLoader.shared.loadSVG(from: data)
+    default:
+      // Try as generic image data
+      return UIImage(data: data, scale: scale)
     }
   }
 }

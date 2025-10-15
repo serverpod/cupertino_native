@@ -71,6 +71,46 @@ class _PopupMenuButtonDemoPageState extends State<PopupMenuButtonDemoPage> {
       ),
     ];
 
+    final svgItems = [
+      CNPopupMenuItem(
+        label: 'Home',
+        imageAsset: const CNImageAsset('assets/icons/home.svg', size: 18),
+      ),
+      CNPopupMenuItem(
+        label: 'Search',
+        imageAsset: const CNImageAsset('assets/icons/search.svg', size: 18),
+      ),
+      const CNPopupMenuDivider(),
+      CNPopupMenuItem(
+        label: 'Profile',
+        imageAsset: const CNImageAsset('assets/icons/profile.svg', size: 18),
+      ),
+      CNPopupMenuItem(
+        label: 'Chat',
+        imageAsset: const CNImageAsset('assets/icons/chat.svg', size: 18),
+      ),
+    ];
+
+    final coloredSvgItems = [
+      CNPopupMenuItem(
+        label: 'Home',
+        imageAsset: const CNImageAsset('assets/icons/home.svg', size: 18, color: CupertinoColors.systemBlue),
+      ),
+      CNPopupMenuItem(
+        label: 'Search',
+        imageAsset: const CNImageAsset('assets/icons/search.svg', size: 18, color: CupertinoColors.systemGreen),
+      ),
+      const CNPopupMenuDivider(),
+      CNPopupMenuItem(
+        label: 'Profile',
+        imageAsset: const CNImageAsset('assets/icons/profile.svg', size: 18, color: CupertinoColors.systemPurple),
+      ),
+      CNPopupMenuItem(
+        label: 'Chat',
+        imageAsset: const CNImageAsset('assets/icons/chat.svg', size: 18, color: CupertinoColors.systemRed),
+      ),
+    ];
+
     return CupertinoPageScaffold(
       navigationBar: const CupertinoNavigationBar(
         middle: Text('Popup Menu Button'),
@@ -143,6 +183,42 @@ class _PopupMenuButtonDemoPageState extends State<PopupMenuButtonDemoPage> {
                     setState(() => _lastSelected = index);
                   },
                   buttonStyle: CNButtonStyle.tinted,
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('SVG menu items'),
+                Spacer(),
+                CNPopupMenuButton.icon(
+                  buttonIcon: const CNSymbol('ellipsis', size: 18),
+                  buttonImageAsset: const CNImageAsset('assets/icons/home.svg', size: 18),
+                  size: 44,
+                  items: svgItems,
+                  onSelected: (index) {
+                    setState(() => _lastSelected = index);
+                  },
+                  buttonStyle: CNButtonStyle.glass,
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('Colored SVG items'),
+                Spacer(),
+                CNPopupMenuButton.icon(
+                  buttonIcon: const CNSymbol('ellipsis', size: 18),
+                  buttonImageAsset: const CNImageAsset('assets/icons/search.svg', size: 18, color: CupertinoColors.systemBlue),
+                  size: 44,
+                  items: coloredSvgItems,
+                  onSelected: (index) {
+                    setState(() => _lastSelected = index);
+                  },
+                  buttonStyle: CNButtonStyle.borderedProminent,
                 ),
               ],
             ),

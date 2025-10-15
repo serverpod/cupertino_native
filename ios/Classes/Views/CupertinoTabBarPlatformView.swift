@@ -1,5 +1,6 @@
 import Flutter
 import UIKit
+import SVGKit
 
 class CupertinoTabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelegate {
   private let channel: FlutterMethodChannel
@@ -7,6 +8,8 @@ class CupertinoTabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelega
   private var tabBar: UITabBar?
   private var tabBarLeft: UITabBar?
   private var tabBarRight: UITabBar?
+  
+  // MARK: - State Properties
   private var isSplit: Bool = false
   private var rightCountVal: Int = 1
   private var currentLabels: [String] = []
@@ -15,7 +18,13 @@ class CupertinoTabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelega
   private var currentBadges: [String] = []
   private var currentCustomIconBytes: [Data?] = []
   private var currentActiveCustomIconBytes: [Data?] = []
-  private var iconScale: CGFloat = UIScreen.main.scale // Default to screen scale
+  private var currentImageAssetPaths: [String] = []
+  private var currentActiveImageAssetPaths: [String] = []
+  private var currentImageAssetData: [Data?] = []
+  private var currentActiveImageAssetData: [Data?] = []
+  private var currentImageAssetFormats: [String] = []
+  private var currentActiveImageAssetFormats: [String] = []
+  private var iconScale: CGFloat = UIScreen.main.scale
   private var leftInsetVal: CGFloat = 0
   private var rightInsetVal: CGFloat = 0
   private var splitSpacingVal: CGFloat = 8
@@ -30,6 +39,12 @@ class CupertinoTabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelega
     var badges: [String] = []
     var customIconBytes: [Data?] = []
     var activeCustomIconBytes: [Data?] = []
+    var imageAssetPaths: [String] = []
+    var activeImageAssetPaths: [String] = []
+    var imageAssetData: [Data?] = []
+    var activeImageAssetData: [Data?] = []
+    var imageAssetFormats: [String] = []
+    var activeImageAssetFormats: [String] = []
     var iconScale: CGFloat = UIScreen.main.scale
     var sizes: [NSNumber] = [] // ignored; use system metrics
     var colors: [NSNumber] = [] // ignored; use tintColor
@@ -53,6 +68,16 @@ class CupertinoTabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelega
       if let bytesArray = dict["activeCustomIconBytes"] as? [FlutterStandardTypedData?] {
         activeCustomIconBytes = bytesArray.map { $0?.data }
       }
+      imageAssetPaths = (dict["imageAssetPaths"] as? [String]) ?? []
+      activeImageAssetPaths = (dict["activeImageAssetPaths"] as? [String]) ?? []
+      if let bytesArray = dict["imageAssetData"] as? [FlutterStandardTypedData?] {
+        imageAssetData = bytesArray.map { $0?.data }
+      }
+      if let bytesArray = dict["activeImageAssetData"] as? [FlutterStandardTypedData?] {
+        activeImageAssetData = bytesArray.map { $0?.data }
+      }
+      imageAssetFormats = (dict["imageAssetFormats"] as? [String]) ?? []
+      activeImageAssetFormats = (dict["activeImageAssetFormats"] as? [String]) ?? []
       if let scale = dict["iconScale"] as? NSNumber {
         iconScale = CGFloat(truncating: scale)
       }
@@ -70,6 +95,12 @@ class CupertinoTabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelega
       // content insets controlled by Flutter padding; keep zero here
     }
 
+    // Preload SVG assets dynamically based on what's actually being used
+    let allAssetPaths = Set(imageAssetPaths + activeImageAssetPaths).filter { !$0.isEmpty }
+    if !allAssetPaths.isEmpty {
+      SVGImageLoader.shared.preloadAssetsFromPaths(Array(allAssetPaths))
+    }
+
     super.init()
 
     container.backgroundColor = .clear
@@ -85,15 +116,24 @@ class CupertinoTabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelega
         var image: UIImage? = nil
         var selectedImage: UIImage? = nil
         
-        // Unselected image: Custom icon takes precedence over SF Symbol
-        if i < customIconBytes.count, let data = customIconBytes[i] {
+        // Priority: imageAsset > customIconBytes > SF Symbol
+        // Unselected image
+        if i < imageAssetData.count, let data = imageAssetData[i] {
+          image = Self.createImageFromData(data, format: (i < imageAssetFormats.count) ? imageAssetFormats[i] : nil, scale: iconScale)
+        } else if i < imageAssetPaths.count && !imageAssetPaths[i].isEmpty {
+          image = Self.loadFlutterAsset(imageAssetPaths[i])
+        } else if i < customIconBytes.count, let data = customIconBytes[i] {
           image = UIImage(data: data, scale: self.iconScale)?.withRenderingMode(.alwaysTemplate)
         } else if i < symbols.count && !symbols[i].isEmpty {
           image = UIImage(systemName: symbols[i])
         }
         
         // Selected image: Use active versions if available
-        if i < activeCustomIconBytes.count, let data = activeCustomIconBytes[i] {
+        if i < activeImageAssetData.count, let data = activeImageAssetData[i] {
+          selectedImage = Self.createImageFromData(data, format: (i < activeImageAssetFormats.count) ? activeImageAssetFormats[i] : nil, scale: iconScale)
+        } else if i < activeImageAssetPaths.count && !activeImageAssetPaths[i].isEmpty {
+          selectedImage = Self.loadFlutterAsset(activeImageAssetPaths[i])
+        } else if i < activeCustomIconBytes.count, let data = activeCustomIconBytes[i] {
           selectedImage = UIImage(data: data, scale: self.iconScale)?.withRenderingMode(.alwaysTemplate)
         } else if i < activeSymbols.count && !activeSymbols[i].isEmpty {
           selectedImage = UIImage(systemName: activeSymbols[i])
@@ -138,8 +178,15 @@ class CupertinoTabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelega
       let leftWidth = left.sizeThatFits(.zero).width + leftInset * 2
       let rightWidth = right.sizeThatFits(.zero).width + rightInset * 2
       let total = leftWidth + rightWidth + spacing
+      
+      // Ensure minimum width for single items to maintain circular shape
+      let minItemWidth: CGFloat = 50.0 // Minimum width per item
+      let adjustedRightWidth = max(rightWidth, minItemWidth * CGFloat(rightCount))
+      let adjustedLeftWidth = max(leftWidth, minItemWidth * CGFloat(count - rightCount))
+      let adjustedTotal = adjustedLeftWidth + adjustedRightWidth + spacing
+      
       // If total exceeds container, fall back to proportional widths
-      if total > container.bounds.width {
+      if adjustedTotal > container.bounds.width {
         let rightFraction = CGFloat(rightCount) / CGFloat(count)
         NSLayoutConstraint.activate([
           right.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -rightInset),
@@ -157,12 +204,12 @@ class CupertinoTabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelega
           right.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -rightInset),
           right.topAnchor.constraint(equalTo: container.topAnchor),
           right.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-          right.widthAnchor.constraint(equalToConstant: rightWidth),
+          right.widthAnchor.constraint(equalToConstant: adjustedRightWidth),
           // Left bar fixed width, pinned to leading
           left.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: leftInset),
           left.topAnchor.constraint(equalTo: container.topAnchor),
           left.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-          left.widthAnchor.constraint(equalToConstant: leftWidth),
+          left.widthAnchor.constraint(equalToConstant: adjustedLeftWidth),
           // Spacing between
           left.trailingAnchor.constraint(lessThanOrEqualTo: right.leadingAnchor, constant: -spacing),
         ])
@@ -194,6 +241,12 @@ class CupertinoTabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelega
     self.currentBadges = badges
     self.currentCustomIconBytes = customIconBytes
     self.currentActiveCustomIconBytes = activeCustomIconBytes
+    self.currentImageAssetPaths = imageAssetPaths
+    self.currentActiveImageAssetPaths = activeImageAssetPaths
+    self.currentImageAssetData = imageAssetData
+    self.currentActiveImageAssetData = activeImageAssetData
+    self.currentImageAssetFormats = imageAssetFormats
+    self.currentActiveImageAssetFormats = activeImageAssetFormats
     self.iconScale = iconScale
     self.leftInsetVal = leftInset
     self.rightInsetVal = rightInset
@@ -231,6 +284,7 @@ channel.setMethodCallHandler { [weak self] call, result in
           self.currentBadges = badges
           self.currentCustomIconBytes = customIconBytes
           self.currentActiveCustomIconBytes = activeCustomIconBytes
+          // Note: imageAsset properties are not updated in this method as they're static
           func buildItems(_ range: Range<Int>) -> [UITabBarItem] {
             var items: [UITabBarItem] = []
             for i in range {
@@ -473,12 +527,34 @@ channel.setMethodCallHandler { [weak self] call, result in
     }
   }
 
+
   private static func colorFromARGB(_ argb: Int) -> UIColor {
     let a = CGFloat((argb >> 24) & 0xFF) / 255.0
     let r = CGFloat((argb >> 16) & 0xFF) / 255.0
     let g = CGFloat((argb >> 8) & 0xFF) / 255.0
     let b = CGFloat(argb & 0xFF) / 255.0
     return UIColor(red: r, green: g, blue: b, alpha: a)
+  }
+
+  private static func loadFlutterAsset(_ assetPath: String) -> UIImage? {
+    return SVGImageLoader.shared.loadSVG(from: assetPath)
+  }
+
+  private static func createImageFromData(_ data: Data, format: String?, scale: CGFloat) -> UIImage? {
+    guard let format = format?.lowercased() else {
+      // Try to detect format from data or default to PNG
+      return UIImage(data: data, scale: scale)
+    }
+    
+    switch format {
+    case "png", "jpg", "jpeg":
+      return UIImage(data: data, scale: scale)
+    case "svg":
+      return SVGImageLoader.shared.loadSVG(from: data)
+    default:
+      // Try as generic image data
+      return UIImage(data: data, scale: scale)
+    }
   }
 
 }

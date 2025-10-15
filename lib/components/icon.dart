@@ -6,29 +6,35 @@ import '../channel/params.dart';
 import '../style/sf_symbol.dart';
 import '../utils/icon_renderer.dart';
 
-/// A platform-rendered SF Symbol icon or custom image icon.
+/// A platform-rendered SF Symbol icon, custom image asset, or IconData.
 ///
 /// Renders an `SFSymbol` on iOS/macOS using native APIs for best fidelity,
-/// or displays a custom image asset.
+/// displays a custom image asset, or renders IconData.
 class CNIcon extends StatefulWidget {
   /// Creates a platform-rendered SF Symbol icon.
   const CNIcon({
     super.key,
-    required this.symbol,
+    this.symbol,
+    this.imageAsset,
     this.customIcon,
     this.size,
     this.color,
     this.mode,
     this.gradient,
     this.height,
-  });
+  }) : assert(symbol != null || imageAsset != null || customIcon != null,
+         'At least one of symbol, imageAsset, or customIcon must be provided');
 
   /// The SF Symbol to render.
-  /// If both [symbol] and [customIcon] are provided, [customIcon] takes precedence.
-  final CNSymbol symbol;
+  /// Priority: [imageAsset] > [customIcon] > [symbol]
+  final CNSymbol? symbol;
+
+  /// Custom image asset (SVG, PNG, etc.) to render.
+  /// If provided, this takes precedence over [symbol] and [customIcon].
+  final CNImageAsset? imageAsset;
 
   /// Optional custom icon from CupertinoIcons, Icons, or any IconData.
-  /// If provided, this takes precedence over [symbol].
+  /// If provided, this takes precedence over [symbol] but not [imageAsset].
   final IconData? customIcon;
 
   /// Overrides the symbol's size.
@@ -82,9 +88,16 @@ class _CNIconState extends State<CNIcon> {
 
   @override
   Widget build(BuildContext context) {
-    // Render custom icon if needed
+    // Priority: imageAsset > customIcon > symbol
+    
+    // Handle image asset (highest priority)
+    if (widget.imageAsset != null) {
+      return _buildNativeIcon(context, imageAsset: widget.imageAsset);
+    }
+    
+    // Handle custom icon (medium priority)
     if (widget.customIcon != null) {
-      final iconSize = widget.size ?? widget.symbol.size;
+      final iconSize = widget.size ?? widget.symbol?.size ?? 24.0;
       return FutureBuilder<Uint8List?>(
         future: iconDataToImageBytes(widget.customIcon!, size: iconSize),
         builder: (context, snapshot) {
@@ -96,30 +109,68 @@ class _CNIconState extends State<CNIcon> {
       );
     }
 
+    // Handle SF Symbol (lowest priority)
     return _buildNativeIcon(context, customIconBytes: null);
   }
 
-  Widget _buildNativeIcon(BuildContext context, {Uint8List? customIconBytes}) {
+  Widget _buildNativeIcon(BuildContext context, {Uint8List? customIconBytes, CNImageAsset? imageAsset}) {
     const viewType = 'CupertinoNativeIcon';
 
-    final symbol = widget.symbol;
+    // Determine which source to use and build parameters accordingly
+    String name = '';
+    Uint8List? imageData;
+    String? imageFormat;
+    String? assetPath;
+    double size = 24.0;
+    Color? color;
+    CNSymbolRenderingMode? mode;
+    bool? gradient;
+    List<Color>? paletteColors;
+
+    if (imageAsset != null) {
+      // Image asset takes precedence
+      assetPath = imageAsset.assetPath;
+      imageData = imageAsset.imageData;
+      imageFormat = imageAsset.imageFormat;
+      size = widget.size ?? imageAsset.size;
+      color = widget.color ?? imageAsset.color;
+      mode = widget.mode ?? imageAsset.mode;
+      gradient = widget.gradient ?? imageAsset.gradient;
+    } else if (customIconBytes != null) {
+      // Custom icon bytes
+      imageData = customIconBytes;
+      imageFormat = 'png'; // IconData is rendered as PNG
+      size = widget.size ?? widget.symbol?.size ?? 24.0;
+      color = widget.color ?? widget.symbol?.color;
+      mode = widget.mode ?? widget.symbol?.mode;
+      gradient = widget.gradient ?? widget.symbol?.gradient;
+      paletteColors = widget.symbol?.paletteColors;
+    } else if (widget.symbol != null) {
+      // SF Symbol
+      name = widget.symbol!.name;
+      size = widget.size ?? widget.symbol!.size;
+      color = widget.color ?? widget.symbol!.color;
+      mode = widget.mode ?? widget.symbol!.mode;
+      gradient = widget.gradient ?? widget.symbol!.gradient;
+      paletteColors = widget.symbol!.paletteColors;
+    }
+
     final creationParams = <String, dynamic>{
-      'name': symbol.name,
-      if (customIconBytes != null) 'customIconBytes': customIconBytes,
+      'name': name,
+      if (assetPath != null) 'assetPath': assetPath,
+      if (imageData != null) 'imageData': imageData,
+      if (imageFormat != null) 'imageFormat': imageFormat,
       'isDark': _isDark,
       'style': <String, dynamic>{
-        'iconSize': (widget.size ?? symbol.size),
-        if ((widget.color ?? symbol.color) != null)
-          'iconColor': resolveColorToArgb(
-            widget.color ?? symbol.color,
-            context,
-          ),
-        if ((widget.mode ?? symbol.mode) != null)
-          'iconRenderingMode': (widget.mode ?? symbol.mode)!.name,
-        if ((widget.gradient ?? symbol.gradient) != null)
-          'iconGradientEnabled': (widget.gradient ?? symbol.gradient) == true,
-        if (symbol.paletteColors != null)
-          'iconPaletteColors': symbol.paletteColors!
+        'iconSize': size,
+        if (color != null)
+          'iconColor': resolveColorToArgb(color, context),
+        if (mode != null)
+          'iconRenderingMode': mode.name,
+        if (gradient != null)
+          'iconGradientEnabled': gradient == true,
+        if (paletteColors != null)
+          'iconPaletteColors': paletteColors
               .map((c) => resolveColorToArgb(c, context))
               .toList(),
       },
@@ -140,7 +191,8 @@ class _CNIconState extends State<CNIcon> {
           );
 
     // Ensure the platform view always has finite constraints
-    final fallbackSize = widget.size ?? widget.symbol.size;
+    final fallbackSize = widget.size ?? 
+        (imageAsset?.size ?? widget.symbol?.size ?? 24.0);
     final h = widget.height ?? fallbackSize;
     final w = fallbackSize;
     return SizedBox(width: w, height: h, child: platformView);
@@ -160,29 +212,72 @@ class _CNIconState extends State<CNIcon> {
 
   void _cacheCurrentProps() {
     _lastIsDark = _isDark;
-    _lastName = widget.symbol.name;
-    _lastSize = widget.size ?? widget.symbol.size;
-    _lastColor = resolveColorToArgb(
-      widget.color ?? widget.symbol.color,
-      context,
-    );
-    _lastMode = (widget.mode ?? widget.symbol.mode)?.name;
-    _lastGradient = widget.gradient ?? widget.symbol.gradient;
+    
+    // Determine current source and cache accordingly
+    if (widget.imageAsset != null) {
+      _lastName = widget.imageAsset!.assetPath;
+      _lastSize = widget.size ?? widget.imageAsset!.size;
+      _lastColor = resolveColorToArgb(
+        widget.color ?? widget.imageAsset!.color,
+        context,
+      );
+      _lastMode = (widget.mode ?? widget.imageAsset!.mode)?.name;
+      _lastGradient = widget.gradient ?? widget.imageAsset!.gradient;
+    } else if (widget.symbol != null) {
+      _lastName = widget.symbol!.name;
+      _lastSize = widget.size ?? widget.symbol!.size;
+      _lastColor = resolveColorToArgb(
+        widget.color ?? widget.symbol!.color,
+        context,
+      );
+      _lastMode = (widget.mode ?? widget.symbol!.mode)?.name;
+      _lastGradient = widget.gradient ?? widget.symbol!.gradient;
+    } else {
+      // Custom icon case
+      _lastName = '';
+      _lastSize = widget.size ?? 24.0;
+      _lastColor = resolveColorToArgb(widget.color, context);
+      _lastMode = widget.mode?.name;
+      _lastGradient = widget.gradient;
+    }
   }
 
   Future<void> _syncPropsToNativeIfNeeded() async {
     final channel = _channel;
     if (channel == null) return;
 
-    // Resolve before any awaits
-    final name = widget.symbol.name;
-    final size = widget.size ?? widget.symbol.size;
-    final color = resolveColorToArgb(
-      widget.color ?? widget.symbol.color,
-      context,
-    );
-    final mode = (widget.mode ?? widget.symbol.mode)?.name;
-    final gradient = widget.gradient ?? widget.symbol.gradient;
+    // Determine current source and resolve values
+    String name = '';
+    double size = 24.0;
+    int? color;
+    String? mode;
+    bool? gradient;
+
+    if (widget.imageAsset != null) {
+      name = widget.imageAsset!.assetPath;
+      size = widget.size ?? widget.imageAsset!.size;
+      color = resolveColorToArgb(
+        widget.color ?? widget.imageAsset!.color,
+        context,
+      );
+      mode = (widget.mode ?? widget.imageAsset!.mode)?.name;
+      gradient = widget.gradient ?? widget.imageAsset!.gradient;
+    } else if (widget.symbol != null) {
+      name = widget.symbol!.name;
+      size = widget.size ?? widget.symbol!.size;
+      color = resolveColorToArgb(
+        widget.color ?? widget.symbol!.color,
+        context,
+      );
+      mode = (widget.mode ?? widget.symbol!.mode)?.name;
+      gradient = widget.gradient ?? widget.symbol!.gradient;
+    } else {
+      // Custom icon case
+      size = widget.size ?? 24.0;
+      color = resolveColorToArgb(widget.color, context);
+      mode = widget.mode?.name;
+      gradient = widget.gradient;
+    }
 
     if (_lastName != name) {
       await channel.invokeMethod('setSymbol', {'name': name});
