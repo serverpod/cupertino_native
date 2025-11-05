@@ -98,7 +98,32 @@ CNButton.icon(
   icon: const CNSymbol('heart.fill'),
   onPressed: () {},
 )
+
+// Button with image and custom placement
+CNButton(
+  label: 'Settings',
+  imageAsset: CNImageAsset('assets/icons/settings.svg', size: 16),
+  imagePlacement: CNImagePlacement.leading,
+  imagePadding: 8.0,
+  horizontalPadding: 16.0,
+  onPressed: () {},
+)
+
+// Button with top image placement
+CNButton(
+  label: 'Profile',
+  imageAsset: CNImageAsset('assets/icons/profile.svg', size: 16),
+  imagePlacement: CNImagePlacement.top,
+  onPressed: () {},
+)
 ```
+
+**Button Features:**
+- Multiple button styles: `plain`, `gray`, `tinted`, `bordered`, `borderedProminent`, `filled`, `glass`, `prominentGlass`
+- Image placement options: `leading`, `trailing`, `top`, `bottom` (for buttons with both image and label)
+- Customizable image padding (spacing between image and text)
+- Customizable horizontal padding (internal button spacing)
+- Supports SVG assets, custom icons (IconData), and SF Symbols with unified priority system
 
 ### Icon (SF Symbols)
 

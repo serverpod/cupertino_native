@@ -36,6 +36,21 @@ class CupertinoButtonNSView: NSView {
       if let e = dict["enabled"] as? NSNumber { enabled = e.boolValue }
       if let m = dict["buttonIconRenderingMode"] as? String { iconMode = m }
       if let pal = dict["buttonIconPaletteColors"] as? [NSNumber] { iconPalette = pal }
+      // Parse new parameters (basic support)
+      if let ip = dict["imagePlacement"] as? String {
+        // Map imagePlacement to imagePosition
+        switch ip {
+        case "leading": button.imagePosition = .imageLeft
+        case "trailing": button.imagePosition = .imageRight
+        case "top": button.imagePosition = .imageAbove
+        case "bottom": button.imagePosition = .imageBelow
+        default: button.imagePosition = .imageLeft
+        }
+      }
+      if let hp = dict["horizontalPadding"] as? NSNumber {
+        button.contentHuggingPriority(for: .horizontal)
+        // Note: NSButton doesn't have direct contentInsets, so we'll use padding via attributed title
+      }
     }
 
     wantsLayer = true
@@ -160,6 +175,71 @@ class CupertinoButtonNSView: NSView {
           self.button.image = nil
           result(nil)
         } else { result(FlutterError(code: "bad_args", message: "Missing title", details: nil)) }
+      case "setImagePlacement":
+        if let args = call.arguments as? [String: Any], let placement = args["placement"] as? String {
+          switch placement {
+          case "leading": self.button.imagePosition = .imageLeft
+          case "trailing": self.button.imagePosition = .imageRight
+          case "top": self.button.imagePosition = .imageAbove
+          case "bottom": self.button.imagePosition = .imageBelow
+          default: self.button.imagePosition = .imageLeft
+          }
+          result(nil)
+        } else { result(FlutterError(code: "bad_args", message: "Missing placement", details: nil)) }
+      case "setImagePadding":
+        // Limited support on macOS
+        result(nil)
+      case "setTextStyle":
+        if let args = call.arguments as? [String: Any] {
+          let color = (args["color"] as? NSNumber).map { Self.colorFromARGB($0.intValue) }
+          let fontSize = (args["fontSize"] as? NSNumber).map { CGFloat(truncating: $0) }
+          let fontWeight = args["fontWeight"] as? Int
+          let fontFamily = args["fontFamily"] as? String
+          
+          var font: NSFont? = nil
+          if let fontSize = fontSize {
+            if let fontFamily = fontFamily, let customFont = NSFont(name: fontFamily, size: fontSize) {
+              font = customFont
+            } else {
+              let weight: NSFont.Weight
+              switch fontWeight ?? 400 {
+              case 100: weight = .ultraLight
+              case 200: weight = .thin
+              case 300: weight = .light
+              case 400: weight = .regular
+              case 500: weight = .medium
+              case 600: weight = .semibold
+              case 700: weight = .bold
+              case 800: weight = .heavy
+              case 900: weight = .black
+              default: weight = .regular
+              }
+              font = NSFont.systemFont(ofSize: fontSize, weight: weight)
+            }
+          }
+          
+          if let title = self.button.title, !title.isEmpty {
+            let attrString = NSMutableAttributedString(string: title)
+            if let font = font {
+              attrString.addAttribute(.font, value: font, range: NSRange(location: 0, length: title.count))
+            }
+            if let color = color {
+              attrString.addAttribute(.foregroundColor, value: color, range: NSRange(location: 0, length: title.count))
+            }
+            self.button.attributedTitle = attrString
+          }
+          result(nil)
+        } else {
+          // Clear text style
+          if let title = self.button.title {
+            self.button.attributedTitle = NSAttributedString(string: title)
+          }
+          result(nil)
+        }
+      case "setHorizontalPadding":
+        // Limited support on macOS - NSButton doesn't have direct contentInsets
+        // Could use padding via attributed string or other means
+        result(nil)
       case "setEnabled":
         if let args = call.arguments as? [String: Any], let e = args["enabled"] as? NSNumber {
           self.isEnabled = e.boolValue

@@ -6,6 +6,7 @@ import 'package:flutter/gestures.dart';
 import '../channel/params.dart';
 import '../style/sf_symbol.dart';
 import '../style/button_style.dart';
+import '../style/image_placement.dart';
 import '../utils/icon_renderer.dart';
 
 /// A Cupertino-native push button.
@@ -23,11 +24,15 @@ class CNButton extends StatefulWidget {
     this.height = 32.0,
     this.shrinkWrap = false,
     this.style = CNButtonStyle.plain,
+    this.customIcon,
+    this.imageAsset,
+    this.imagePlacement = CNImagePlacement.leading,
+    this.imagePadding,
+    this.horizontalPadding,
   }) : icon = null,
-       customIcon = null,
-       imageAsset = null,
        width = null,
-       round = false;
+       round = false,
+       super();
 
   /// Creates a round, icon-only variant of [CNButton].
   const CNButton.icon({
@@ -40,6 +45,9 @@ class CNButton extends StatefulWidget {
     this.tint,
     double size = 44.0,
     this.style = CNButtonStyle.glass,
+    this.imagePlacement = CNImagePlacement.leading,
+    this.imagePadding,
+    this.horizontalPadding,
   }) : label = null,
        round = true,
        width = size,
@@ -78,6 +86,15 @@ class CNButton extends StatefulWidget {
   /// Visual style to apply.
   final CNButtonStyle style;
 
+  /// Image placement relative to text when both are present.
+  final CNImagePlacement imagePlacement;
+
+  /// Padding between image and text.
+  final double? imagePadding;
+
+  /// Horizontal padding for button content.
+  final double? horizontalPadding;
+
   /// Whether the icon variant (round) is used.
   final bool round;
 
@@ -97,7 +114,11 @@ class _CNButtonState extends State<CNButton> {
   double? _lastIconSize;
   int? _lastIconColor;
   double? _intrinsicWidth;
+  double? _intrinsicHeight;
   CNButtonStyle? _lastStyle;
+  CNImagePlacement? _lastImagePlacement;
+  double? _lastImagePadding;
+  double? _lastHorizontalPadding;
   Offset? _downPosition;
   bool _pressed = false;
 
@@ -175,6 +196,11 @@ class _CNButtonState extends State<CNButton> {
 
   Widget _buildNativeButton(BuildContext context, {Uint8List? customIconBytes, CNImageAsset? imageAsset}) {
     const viewType = 'CupertinoNativeButton';
+    
+    // Create a key that changes when size-affecting parameters change
+    // This forces a full platform view rebuild when these parameters change
+    final iconSizeForKey = widget.icon?.size ?? widget.imageAsset?.size ?? (widget.customIcon != null ? (widget.icon?.size ?? 20.0) : null);
+    final viewKey = ValueKey('${widget.label}_${widget.imagePlacement.name}_${widget.imagePadding}_${widget.horizontalPadding}_${widget.imageAsset?.assetPath}_${widget.customIcon != null}_${widget.icon?.name}_$iconSizeForKey');
 
     // Determine which source to use and build parameters accordingly
     String iconName = '';
@@ -241,10 +267,16 @@ class _CNButtonState extends State<CNButton> {
       'enabled': (widget.enabled && widget.onPressed != null),
       'isDark': _isDark,
       'style': encodeStyle(context, tint: _effectiveTint),
+      'imagePlacement': widget.imagePlacement.name,
+      if (widget.imagePadding != null)
+        'imagePadding': widget.imagePadding,
+      if (widget.horizontalPadding != null)
+        'horizontalPadding': widget.horizontalPadding,
     };
 
     final platformView = defaultTargetPlatform == TargetPlatform.iOS
         ? UiKitView(
+            key: viewKey,
             viewType: viewType,
             creationParams: creationParams,
             creationParamsCodec: const StandardMessageCodec(),
@@ -255,6 +287,7 @@ class _CNButtonState extends State<CNButton> {
             },
           )
         : AppKitView(
+            key: viewKey,
             viewType: viewType,
             creationParams: creationParams,
             creationParamsCodec: const StandardMessageCodec(),
@@ -274,6 +307,12 @@ class _CNButtonState extends State<CNButton> {
         } else if (preferIntrinsic) {
           width = _intrinsicWidth ?? 80.0;
         }
+        // Use intrinsic height when image is top/bottom to prevent cropping
+        final needsDynamicHeight = widget.imageAsset != null || widget.customIcon != null || widget.icon != null;
+        final isVerticalPlacement = widget.imagePlacement == CNImagePlacement.top || widget.imagePlacement == CNImagePlacement.bottom;
+        final height = (needsDynamicHeight && isVerticalPlacement && _intrinsicHeight != null)
+            ? _intrinsicHeight!
+            : widget.height;
         return Listener(
           onPointerDown: (e) {
             _downPosition = e.position;
@@ -297,7 +336,7 @@ class _CNButtonState extends State<CNButton> {
             _downPosition = null;
           },
           child: SizedBox(
-            height: widget.height,
+            height: height,
             width: width,
             child: platformView,
           ),
@@ -310,6 +349,9 @@ class _CNButtonState extends State<CNButton> {
     final ch = MethodChannel('CupertinoNativeButton_$id');
     _channel = ch;
     ch.setMethodCallHandler(_onMethodCall);
+    // Clear previous intrinsic dimensions when view is recreated
+    _intrinsicWidth = null;
+    _intrinsicHeight = null;
     _lastTint = resolveColorToArgb(_effectiveTint, context);
     _lastIsDark = _isDark;
     _lastTitle = widget.label;
@@ -317,9 +359,16 @@ class _CNButtonState extends State<CNButton> {
     _lastIconSize = widget.icon?.size;
     _lastIconColor = resolveColorToArgb(widget.icon?.color, context);
     _lastStyle = widget.style;
-    if (!widget.isIcon) {
-      _requestIntrinsicSize();
-    }
+    _lastImagePlacement = widget.imagePlacement;
+    _lastImagePadding = widget.imagePadding;
+    _lastHorizontalPadding = widget.horizontalPadding;
+    // Always request intrinsic size to get both width and height
+    // Use a small delay to ensure native view has finished layout
+    Future.delayed(const Duration(milliseconds: 10), () {
+      if (mounted && _channel != null) {
+        _requestIntrinsicSize();
+      }
+    });
   }
 
   Future<dynamic> _onMethodCall(MethodCall call) async {
@@ -339,8 +388,12 @@ class _CNButtonState extends State<CNButton> {
     try {
       final size = await ch.invokeMethod<Map>('getIntrinsicSize');
       final w = (size?['width'] as num?)?.toDouble();
-      if (w != null && mounted) {
-        setState(() => _intrinsicWidth = w);
+      final h = (size?['height'] as num?)?.toDouble();
+      if (mounted) {
+        setState(() {
+          if (w != null) _intrinsicWidth = w;
+          if (h != null) _intrinsicHeight = h;
+        });
       }
     } catch (_) {}
   }
@@ -368,6 +421,36 @@ class _CNButtonState extends State<CNButton> {
     if (_lastTitle != widget.label && widget.label != null) {
       await ch.invokeMethod('setButtonTitle', {'title': widget.label});
       _lastTitle = widget.label;
+      _requestIntrinsicSize();
+    }
+
+    // Sync imagePlacement
+    if (_lastImagePlacement != widget.imagePlacement) {
+      await ch.invokeMethod('setImagePlacement', {'placement': widget.imagePlacement.name});
+      _lastImagePlacement = widget.imagePlacement;
+      // Request intrinsic size when placement changes (affects layout)
+      _requestIntrinsicSize();
+    }
+
+    // Sync imagePadding
+    if (_lastImagePadding != widget.imagePadding) {
+      if (widget.imagePadding != null) {
+        await ch.invokeMethod('setImagePadding', {'padding': widget.imagePadding});
+      } else {
+        await ch.invokeMethod('setImagePadding', null);
+      }
+      _lastImagePadding = widget.imagePadding;
+      // Request intrinsic size when padding changes (affects layout)
+      _requestIntrinsicSize();
+    }
+
+    // Sync horizontalPadding
+    if (_lastHorizontalPadding != widget.horizontalPadding) {
+      await ch.invokeMethod('setHorizontalPadding', {
+        'padding': widget.horizontalPadding,
+      });
+      _lastHorizontalPadding = widget.horizontalPadding;
+      // Request intrinsic size when padding changes (affects width)
       _requestIntrinsicSize();
     }
 
@@ -421,6 +504,8 @@ class _CNButtonState extends State<CNButton> {
       
       if (updates.isNotEmpty) {
         await ch.invokeMethod('setButtonIcon', updates);
+        // Request intrinsic size when icon changes (affects layout)
+        _requestIntrinsicSize();
       }
     }
   }

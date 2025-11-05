@@ -338,6 +338,16 @@ class _CNTabBarState extends State<CNTabBar> {
     _lastSplit = widget.split;
     _lastRightCount = widget.rightCount;
     _lastSplitSpacing = widget.splitSpacing;
+    
+    // Force refresh for label rendering on iOS < 16
+    // Wait for next frame to ensure view is fully initialized
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      Future.delayed(const Duration(milliseconds: 50), () {
+        if (mounted && _channel != null) {
+          _channel?.invokeMethod('refresh');
+        }
+      });
+    }
   }
 
   Future<dynamic> _onMethodCall(MethodCall call) async {

@@ -71,6 +71,16 @@ class _ButtonDemoPageState extends State<ButtonDemoPage> {
                   shrinkWrap: true,
                 ),
                 CNButton(
+                  label: 'Glass Chat',
+                  imageAsset: CNImageAsset('assets/icons/chat.svg', size: 18),
+                  style: CNButtonStyle.glass,
+                  onPressed: () => _set('Glass Chat'),
+                  imagePadding: 10,
+                  shrinkWrap: true,
+                  height: 48,
+                  horizontalPadding: 24,
+                ),
+                CNButton(
                   label: 'ProminentGlass',
                   style: CNButtonStyle.prominentGlass,
                   onPressed: () => _set('ProminentGlass'),
@@ -144,7 +154,7 @@ class _ButtonDemoPageState extends State<ButtonDemoPage> {
               children: [
                 CNButton.icon(
                   icon: const CNSymbol('house.fill', size: 18),
-                  customIcon: CupertinoIcons.home,  // Custom IconData!
+                  customIcon: CupertinoIcons.home, // Custom IconData!
                   style: CNButtonStyle.plain,
                   onPressed: () => _set('Custom Icon Plain'),
                 ),
@@ -186,15 +196,23 @@ class _ButtonDemoPageState extends State<ButtonDemoPage> {
                     });
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: CupertinoColors.systemBlue.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: CupertinoColors.systemBlue.withOpacity(0.3)),
+                      border: Border.all(
+                        color: CupertinoColors.systemBlue.withOpacity(0.3),
+                      ),
                     ),
                     child: Text(
                       _useAlternateSvgIcons ? 'Reset' : 'Switch',
-                      style: const TextStyle(fontSize: 12, color: CupertinoColors.systemBlue),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: CupertinoColors.systemBlue,
+                      ),
                     ),
                   ),
                 ),
@@ -209,8 +227,10 @@ class _ButtonDemoPageState extends State<ButtonDemoPage> {
                 CNButton.icon(
                   icon: const CNSymbol('house.fill', size: 18),
                   imageAsset: CNImageAsset(
-                    _useAlternateSvgIcons ? 'assets/icons/profile.svg' : 'assets/icons/home.svg', 
-                    size: 18
+                    _useAlternateSvgIcons
+                        ? 'assets/icons/profile.svg'
+                        : 'assets/icons/home.svg',
+                    size: 18,
                   ),
                   style: CNButtonStyle.plain,
                   onPressed: () => _set('SVG Plain'),
@@ -218,8 +238,10 @@ class _ButtonDemoPageState extends State<ButtonDemoPage> {
                 CNButton.icon(
                   icon: const CNSymbol('house.fill', size: 18),
                   imageAsset: CNImageAsset(
-                    _useAlternateSvgIcons ? 'assets/icons/chat.svg' : 'assets/icons/search.svg', 
-                    size: 18
+                    _useAlternateSvgIcons
+                        ? 'assets/icons/chat.svg'
+                        : 'assets/icons/search.svg',
+                    size: 18,
                   ),
                   style: CNButtonStyle.gray,
                   onPressed: () => _set('SVG Gray'),
@@ -227,8 +249,10 @@ class _ButtonDemoPageState extends State<ButtonDemoPage> {
                 CNButton.icon(
                   icon: const CNSymbol('house.fill', size: 18),
                   imageAsset: CNImageAsset(
-                    _useAlternateSvgIcons ? 'assets/icons/home.svg' : 'assets/icons/profile.svg', 
-                    size: 18
+                    _useAlternateSvgIcons
+                        ? 'assets/icons/home.svg'
+                        : 'assets/icons/profile.svg',
+                    size: 18,
                   ),
                   style: CNButtonStyle.tinted,
                   onPressed: () => _set('SVG Tinted'),
@@ -236,8 +260,10 @@ class _ButtonDemoPageState extends State<ButtonDemoPage> {
                 CNButton.icon(
                   icon: const CNSymbol('house.fill', size: 18),
                   imageAsset: CNImageAsset(
-                    _useAlternateSvgIcons ? 'assets/icons/search.svg' : 'assets/icons/chat.svg', 
-                    size: 18
+                    _useAlternateSvgIcons
+                        ? 'assets/icons/search.svg'
+                        : 'assets/icons/chat.svg',
+                    size: 18,
                   ),
                   style: CNButtonStyle.bordered,
                   onPressed: () => _set('SVG Bordered'),
@@ -245,9 +271,11 @@ class _ButtonDemoPageState extends State<ButtonDemoPage> {
                 CNButton.icon(
                   icon: const CNSymbol('house.fill', size: 18),
                   imageAsset: CNImageAsset(
-                    _useAlternateSvgIcons ? 'assets/icons/chat.svg' : 'assets/icons/home.svg', 
-                    size: 18, 
-                    color: CupertinoColors.systemRed
+                    _useAlternateSvgIcons
+                        ? 'assets/icons/chat.svg'
+                        : 'assets/icons/home.svg',
+                    size: 18,
+                    color: CupertinoColors.systemRed,
                   ),
                   style: CNButtonStyle.glass,
                   onPressed: () => _set('SVG Glass'),
@@ -255,12 +283,124 @@ class _ButtonDemoPageState extends State<ButtonDemoPage> {
                 CNButton.icon(
                   icon: const CNSymbol('house.fill', size: 18),
                   imageAsset: CNImageAsset(
-                    _useAlternateSvgIcons ? 'assets/icons/profile.svg' : 'assets/icons/search.svg', 
-                    size: 18, 
-                    color: CupertinoColors.systemBlue
+                    _useAlternateSvgIcons
+                        ? 'assets/icons/profile.svg'
+                        : 'assets/icons/search.svg',
+                    size: 18,
+                    color: CupertinoColors.systemBlue,
                   ),
                   style: CNButtonStyle.prominentGlass,
                   onPressed: () => _set('SVG ProminentGlass'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 48),
+            const Text('Image Placement'),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                CNButton(
+                  label: 'Leading',
+                  imageAsset: CNImageAsset('assets/icons/home.svg', size: 16),
+                  imagePlacement: CNImagePlacement.leading,
+                  imagePadding: 6.0,
+                  style: CNButtonStyle.glass,
+                  onPressed: () => _set('Leading'),
+                  shrinkWrap: true,
+                ),
+                CNButton(
+                  label: 'Trailing',
+                  imageAsset: CNImageAsset('assets/icons/search.svg', size: 16),
+                  imagePlacement: CNImagePlacement.trailing,
+                  imagePadding: 6.0,
+                  style: CNButtonStyle.glass,
+                  onPressed: () => _set('Trailing'),
+                  shrinkWrap: true,
+                ),
+                CNButton(
+                  label: 'Top',
+                  imageAsset: CNImageAsset(
+                    'assets/icons/profile.svg',
+                    size: 16,
+                  ),
+                  imagePlacement: CNImagePlacement.top,
+                  imagePadding: 6.0,
+                  style: CNButtonStyle.glass,
+                  onPressed: () => _set('Top'),
+                  shrinkWrap: true,
+                ),
+                CNButton(
+                  label: 'Bottom',
+                  imageAsset: CNImageAsset('assets/icons/chat.svg', size: 16),
+                  imagePlacement: CNImagePlacement.bottom,
+                  imagePadding: 6.0,
+                  style: CNButtonStyle.glass,
+                  onPressed: () => _set('Bottom'),
+                  shrinkWrap: true,
+                ),
+                CNButton(
+                  label: 'ksdjksd jlajd  hjghjg hg ',
+                  imageAsset: CNImageAsset(
+                    'assets/icons/profile.svg',
+                    size: 16,
+                  ),
+                  imagePlacement: CNImagePlacement.top,
+                  imagePadding: 6.0,
+                  style: CNButtonStyle.glass,
+                  onPressed: () => _set('Top'),
+                  shrinkWrap: true,
+                ),
+              ],
+            ),
+            const SizedBox(height: 48),
+            const Text('Image Padding'),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                CNButton(
+                  label: 'No Padding',
+                  imageAsset: CNImageAsset('assets/icons/home.svg', size: 16),
+                  imagePlacement: CNImagePlacement.leading,
+                  onPressed: () => _set('No Padding'),
+                  shrinkWrap: true,
+                ),
+                CNButton(
+                  label: 'With Padding',
+                  imageAsset: CNImageAsset('assets/icons/search.svg', size: 16),
+                  imagePlacement: CNImagePlacement.leading,
+                  imagePadding: 8.0,
+                  onPressed: () => _set('With Padding'),
+                  shrinkWrap: true,
+                ),
+              ],
+            ),
+            const SizedBox(height: 48),
+            const Text('Horizontal Padding'),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                CNButton(
+                  label: 'Default',
+                  onPressed: () => _set('Default'),
+                  shrinkWrap: true,
+                ),
+                CNButton(
+                  label: 'Extra Padding',
+                  horizontalPadding: 24.0,
+                  onPressed: () => _set('Extra Padding'),
+                  shrinkWrap: true,
+                ),
+                CNButton(
+                  label: 'Minimal',
+                  horizontalPadding: 4.0,
+                  onPressed: () => _set('Minimal'),
+                  shrinkWrap: true,
                 ),
               ],
             ),

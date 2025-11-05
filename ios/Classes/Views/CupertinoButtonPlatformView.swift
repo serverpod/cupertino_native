@@ -29,6 +29,9 @@ class CupertinoButtonPlatformView: NSObject, FlutterPlatformView {
     var iconMode: String? = nil
     var iconPalette: [NSNumber] = []
     var iconScale: CGFloat = UIScreen.main.scale
+    var imagePlacement: String = "leading"
+    var imagePadding: CGFloat? = nil
+    var horizontalPadding: CGFloat? = nil
 
     if let dict = args as? [String: Any] {
       if let t = dict["buttonTitle"] as? String { title = t }
@@ -50,6 +53,9 @@ class CupertinoButtonPlatformView: NSObject, FlutterPlatformView {
       if let e = dict["enabled"] as? NSNumber { enabled = e.boolValue }
       if let m = dict["buttonIconRenderingMode"] as? String { iconMode = m }
       if let pal = dict["buttonIconPaletteColors"] as? [NSNumber] { iconPalette = pal }
+      if let ip = dict["imagePlacement"] as? String { imagePlacement = ip }
+      if let ip = dict["imagePadding"] as? NSNumber { imagePadding = CGFloat(truncating: ip) }
+      if let hp = dict["horizontalPadding"] as? NSNumber { horizontalPadding = CGFloat(truncating: hp) }
     }
 
     super.init()
@@ -124,7 +130,14 @@ class CupertinoButtonPlatformView: NSObject, FlutterPlatformView {
       }
       finalImage = image
     }
-    setButtonContent(title: title, image: finalImage, iconOnly: (title == nil))
+    setButtonContent(
+      title: title,
+      image: finalImage,
+      iconOnly: (title == nil),
+      imagePlacement: imagePlacement,
+      imagePadding: imagePadding,
+      horizontalPadding: horizontalPadding
+    )
 
     // Default system highlight/pressed behavior
     button.addTarget(self, action: #selector(onPressed(_:)), for: .touchUpInside)
@@ -162,7 +175,7 @@ class CupertinoButtonPlatformView: NSObject, FlutterPlatformView {
         } else { result(FlutterError(code: "bad_args", message: "Missing pressed", details: nil)) }
       case "setButtonTitle":
         if let args = call.arguments as? [String: Any], let t = args["title"] as? String {
-          self.setButtonContent(title: t, image: nil, iconOnly: false)
+          self.setButtonContent(title: t, image: nil, iconOnly: false, imagePlacement: nil, imagePadding: nil, horizontalPadding: nil)
           result(nil)
         } else { result(FlutterError(code: "bad_args", message: "Missing title", details: nil)) }
       case "setButtonIcon":
@@ -219,7 +232,7 @@ class CupertinoButtonPlatformView: NSObject, FlutterPlatformView {
             }
           }
           
-          self.setButtonContent(title: nil, image: image, iconOnly: true)
+          self.setButtonContent(title: nil, image: image, iconOnly: true, imagePlacement: nil, imagePadding: nil, horizontalPadding: nil)
           result(nil)
         } else { result(FlutterError(code: "bad_args", message: "Missing icon args", details: nil)) }
       case "setBrightness":
@@ -227,6 +240,65 @@ class CupertinoButtonPlatformView: NSObject, FlutterPlatformView {
           if #available(iOS 13.0, *) { self.container.overrideUserInterfaceStyle = isDark ? .dark : .light }
           result(nil)
         } else { result(FlutterError(code: "bad_args", message: "Missing isDark", details: nil)) }
+      case "setImagePlacement":
+        if let args = call.arguments as? [String: Any], let placement = args["placement"] as? String {
+          if #available(iOS 15.0, *) {
+            var cfg = self.button.configuration ?? .plain()
+            switch placement {
+            case "leading": cfg.imagePlacement = .leading
+            case "trailing": cfg.imagePlacement = .trailing
+            case "top": cfg.imagePlacement = .top
+            case "bottom": cfg.imagePlacement = .bottom
+            default: cfg.imagePlacement = .leading
+            }
+            self.button.configuration = cfg
+          }
+          result(nil)
+        } else { result(FlutterError(code: "bad_args", message: "Missing placement", details: nil)) }
+      case "setImagePadding":
+        if let args = call.arguments as? [String: Any], let padding = (args["padding"] as? NSNumber).map({ CGFloat(truncating: $0) }) {
+          if #available(iOS 15.0, *) {
+            var cfg = self.button.configuration ?? .plain()
+            cfg.imagePadding = padding
+            self.button.configuration = cfg
+          }
+          result(nil)
+        } else {
+          // Clear padding if args is nil
+          if #available(iOS 15.0, *) {
+            var cfg = self.button.configuration ?? .plain()
+            cfg.imagePadding = 0
+            self.button.configuration = cfg
+          }
+          result(nil)
+        }
+      case "setHorizontalPadding":
+        if let args = call.arguments as? [String: Any], let padding = (args["padding"] as? NSNumber).map({ CGFloat(truncating: $0) }) {
+          if #available(iOS 15.0, *) {
+            var cfg = self.button.configuration ?? .plain()
+            var insets = cfg.contentInsets
+            insets.leading = padding
+            insets.trailing = padding
+            cfg.contentInsets = insets
+            self.button.configuration = cfg
+          } else {
+            self.button.contentEdgeInsets = UIEdgeInsets(top: 0, left: padding, bottom: 0, right: padding)
+          }
+          result(nil)
+        } else {
+          // Clear padding if args is nil
+          if #available(iOS 15.0, *) {
+            var cfg = self.button.configuration ?? .plain()
+            var insets = cfg.contentInsets
+            insets.leading = 0
+            insets.trailing = 0
+            cfg.contentInsets = insets
+            self.button.configuration = cfg
+          } else {
+            self.button.contentEdgeInsets = .zero
+          }
+          result(nil)
+        }
       default:
         result(FlutterMethodNotImplemented)
       }
@@ -313,17 +385,60 @@ class CupertinoButtonPlatformView: NSObject, FlutterPlatformView {
     }
   }
 
-  private func setButtonContent(title: String?, image: UIImage?, iconOnly: Bool) {
+  private func setButtonContent(
+    title: String?,
+    image: UIImage?,
+    iconOnly: Bool,
+    imagePlacement: String? = nil,
+    imagePadding: CGFloat? = nil,
+    horizontalPadding: CGFloat? = nil
+  ) {
     if #available(iOS 15.0, *) {
       var cfg = button.configuration ?? .plain()
-      cfg.title = title
-      cfg.image = image
+      if let title = title {
+        cfg.title = title
+      }
+      if let image = image {
+        cfg.image = image
+      }
+      
+      // Apply imagePlacement
+      if let placement = imagePlacement {
+        switch placement {
+        case "leading":
+          cfg.imagePlacement = .leading
+        case "trailing":
+          cfg.imagePlacement = .trailing
+        case "top":
+          cfg.imagePlacement = .top
+        case "bottom":
+          cfg.imagePlacement = .bottom
+        default:
+          cfg.imagePlacement = .leading
+        }
+      }
+      
+      // Apply imagePadding
+      if let padding = imagePadding {
+        cfg.imagePadding = padding
+      }
+      
+      // Apply horizontalPadding
+      if let padding = horizontalPadding {
+        var insets = cfg.contentInsets
+        insets.leading = padding
+        insets.trailing = padding
+        cfg.contentInsets = insets
+      }
+      
       button.configuration = cfg
     } else {
       button.setTitle(title, for: .normal)
       button.setImage(image, for: .normal)
       if iconOnly {
         button.contentEdgeInsets = UIEdgeInsets(top: 2, left: 2, bottom: 2, right: 2)
+      } else if let padding = horizontalPadding {
+        button.contentEdgeInsets = UIEdgeInsets(top: 0, left: padding, bottom: 0, right: padding)
       }
     }
   }

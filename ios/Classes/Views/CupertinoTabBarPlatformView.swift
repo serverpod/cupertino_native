@@ -216,6 +216,32 @@ class CupertinoTabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelega
           left.trailingAnchor.constraint(lessThanOrEqualTo: right.leadingAnchor, constant: -spacing),
         ])
       }
+      // Force layout update for background and text rendering on iOS < 16
+      // Re-assign items after layout to ensure labels render properly
+      DispatchQueue.main.async { [weak self, weak left, weak right] in
+        guard let self = self, let left = left, let right = right else { return }
+        self.container.setNeedsLayout()
+        self.container.layoutIfNeeded()
+        left.setNeedsLayout()
+        left.layoutIfNeeded()
+        right.setNeedsLayout()
+        right.layoutIfNeeded()
+        // Re-assign items to force label rendering
+        let leftItems = left.items
+        let rightItems = right.items
+        left.items = leftItems
+        right.items = rightItems
+        // Force another update cycle for text rendering
+        DispatchQueue.main.async { [weak left, weak right] in
+          guard let left = left, let right = right else { return }
+          left.setNeedsDisplay()
+          right.setNeedsDisplay()
+          left.setNeedsLayout()
+          left.layoutIfNeeded()
+          right.setNeedsLayout()
+          right.layoutIfNeeded()
+        }
+      }
     } else {
       let bar = UITabBar(frame: .zero)
       tabBar = bar
@@ -233,6 +259,25 @@ class CupertinoTabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelega
         bar.topAnchor.constraint(equalTo: container.topAnchor),
         bar.bottomAnchor.constraint(equalTo: container.bottomAnchor),
       ])
+      // Force layout update for background and text rendering on iOS < 16
+      // Re-assign items after layout to ensure labels render properly
+      DispatchQueue.main.async { [weak self, weak bar] in
+        guard let self = self, let bar = bar else { return }
+        self.container.setNeedsLayout()
+        self.container.layoutIfNeeded()
+        bar.setNeedsLayout()
+        bar.layoutIfNeeded()
+        // Re-assign items to force label rendering
+        let items = bar.items
+        bar.items = items
+        // Force another update cycle for text rendering
+        DispatchQueue.main.async { [weak bar] in
+          guard let bar = bar else { return }
+          bar.setNeedsDisplay()
+          bar.setNeedsLayout()
+          bar.layoutIfNeeded()
+        }
+      }
     }
     // Store split settings for future updates
     self.isSplit = split
@@ -445,6 +490,7 @@ channel.setMethodCallHandler { [weak self] call, result in
             left.translatesAutoresizingMaskIntoConstraints = false
             right.translatesAutoresizingMaskIntoConstraints = false
             left.delegate = self; right.delegate = self
+            if let ap = appearance { if #available(iOS 13.0, *) { left.standardAppearance = ap; right.standardAppearance = ap } }
             left.items = buildItems(0..<leftEnd)
             right.items = buildItems(leftEnd..<count)
             if selectedIndex < leftEnd, let items = left.items { left.selectedItem = items[selectedIndex]; right.selectedItem = nil }
@@ -486,11 +532,38 @@ channel.setMethodCallHandler { [weak self] call, result in
                 left.trailingAnchor.constraint(lessThanOrEqualTo: right.leadingAnchor, constant: -spacing),
               ])
             }
+            // Force layout update for background and text rendering on iOS < 16
+            // Re-assign items after layout to ensure labels render properly
+            DispatchQueue.main.async { [weak self, weak left, weak right] in
+              guard let self = self, let left = left, let right = right else { return }
+              self.container.setNeedsLayout()
+              self.container.layoutIfNeeded()
+              left.setNeedsLayout()
+              left.layoutIfNeeded()
+              right.setNeedsLayout()
+              right.layoutIfNeeded()
+              // Re-assign items to force label rendering
+              let leftItems = left.items
+              let rightItems = right.items
+              left.items = leftItems
+              right.items = rightItems
+              // Force another update cycle for text rendering
+              DispatchQueue.main.async { [weak left, weak right] in
+                guard let left = left, let right = right else { return }
+                left.setNeedsDisplay()
+                right.setNeedsDisplay()
+                left.setNeedsLayout()
+                left.layoutIfNeeded()
+                right.setNeedsLayout()
+                right.layoutIfNeeded()
+              }
+            }
           } else {
             let bar = UITabBar(frame: .zero)
             self.tabBar = bar
             bar.delegate = self
             bar.translatesAutoresizingMaskIntoConstraints = false
+            if let ap = appearance { if #available(iOS 13.0, *) { bar.standardAppearance = ap; if #available(iOS 15.0, *) { bar.scrollEdgeAppearance = ap } } }
             bar.items = buildItems(0..<count)
             if let items = bar.items, selectedIndex >= 0, selectedIndex < items.count { bar.selectedItem = items[selectedIndex] }
             self.container.addSubview(bar)
@@ -500,6 +573,25 @@ channel.setMethodCallHandler { [weak self] call, result in
               bar.topAnchor.constraint(equalTo: self.container.topAnchor),
               bar.bottomAnchor.constraint(equalTo: self.container.bottomAnchor),
             ])
+            // Force layout update for background and text rendering on iOS < 16
+            // Re-assign items after layout to ensure labels render properly
+            DispatchQueue.main.async { [weak self, weak bar] in
+              guard let self = self, let bar = bar else { return }
+              self.container.setNeedsLayout()
+              self.container.layoutIfNeeded()
+              bar.setNeedsLayout()
+              bar.layoutIfNeeded()
+              // Re-assign items to force label rendering
+              let items = bar.items
+              bar.items = items
+              // Force another update cycle for text rendering
+              DispatchQueue.main.async { [weak bar] in
+                guard let bar = bar else { return }
+                bar.setNeedsDisplay()
+                bar.setNeedsLayout()
+                bar.layoutIfNeeded()
+              }
+            }
           }
           self.isSplit = split; self.rightCountVal = rightCount; self.leftInsetVal = leftInset; self.rightInsetVal = rightInset
           result(nil)
@@ -553,6 +645,105 @@ channel.setMethodCallHandler { [weak self] call, result in
           if #available(iOS 13.0, *) { self.container.overrideUserInterfaceStyle = isDark ? .dark : .light }
           result(nil)
         } else { result(FlutterError(code: "bad_args", message: "Missing isDark", details: nil)) }
+      case "refresh":
+        // Force refresh for label rendering on iOS < 16
+        // UITabBar only fully layouts labels when items are selected
+        // So we need to temporarily select each item to force layout
+        if let bar = self.tabBar, let items = bar.items, !items.isEmpty {
+          let originalSelected = bar.selectedItem
+          // Temporarily remove delegate to prevent callbacks during refresh
+          bar.delegate = nil
+          DispatchQueue.main.async { [weak self, weak bar, weak originalSelected] in
+            guard let self = self, let bar = bar, let items = bar.items, !items.isEmpty else { return }
+            // Cycle through each item to force label layout
+            var index = 0
+            func selectNext() {
+              guard index < items.count else {
+                // Restore original selection
+                if let original = originalSelected {
+                  bar.selectedItem = original
+                } else {
+                  bar.selectedItem = items.first
+                }
+                bar.setNeedsLayout()
+                bar.layoutIfNeeded()
+                // Restore delegate
+                bar.delegate = self
+                return
+              }
+              bar.selectedItem = items[index]
+              bar.setNeedsLayout()
+              bar.layoutIfNeeded()
+              index += 1
+              DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) {
+                selectNext()
+              }
+            }
+            selectNext()
+          }
+        } else if let left = self.tabBarLeft, let right = self.tabBarRight {
+          let leftOriginal = left.selectedItem
+          let rightOriginal = right.selectedItem
+          // Temporarily remove delegates to prevent callbacks during refresh
+          left.delegate = nil
+          right.delegate = nil
+          DispatchQueue.main.async { [weak self, weak left, weak right, weak leftOriginal, weak rightOriginal] in
+            guard let self = self, let left = left, let right = right,
+                  let leftItems = left.items, let rightItems = right.items else { return }
+            
+            // Process left items
+            var leftIndex = 0
+            func selectNextLeft() {
+              if leftIndex < leftItems.count {
+                left.selectedItem = leftItems[leftIndex]
+                left.setNeedsLayout()
+                left.layoutIfNeeded()
+                leftIndex += 1
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) {
+                  selectNextLeft()
+                }
+              } else {
+                // Restore original or first item
+                if let original = leftOriginal {
+                  left.selectedItem = original
+                } else {
+                  left.selectedItem = leftItems.first
+                }
+                left.setNeedsLayout()
+                left.layoutIfNeeded()
+                
+                // Process right items
+                var rightIndex = 0
+                func selectNextRight() {
+                  if rightIndex < rightItems.count {
+                    right.selectedItem = rightItems[rightIndex]
+                    right.setNeedsLayout()
+                    right.layoutIfNeeded()
+                    rightIndex += 1
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) {
+                      selectNextRight()
+                    }
+                  } else {
+                    // Restore original or first item
+                    if let original = rightOriginal {
+                      right.selectedItem = original
+                    } else {
+                      right.selectedItem = rightItems.first
+                    }
+                    right.setNeedsLayout()
+                    right.layoutIfNeeded()
+                    // Restore delegates
+                    left.delegate = self
+                    right.delegate = self
+                  }
+                }
+                selectNextRight()
+              }
+            }
+            selectNextLeft()
+          }
+        }
+        result(nil)
       default:
         result(FlutterMethodNotImplemented)
       }
