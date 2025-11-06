@@ -29,12 +29,21 @@ public class CupertinoNativePlugin: NSObject, FlutterPlugin {
 
     let buttonFactory = CupertinoButtonViewFactory(messenger: registrar.messenger())
     registrar.register(buttonFactory, withId: "CupertinoNativeButton")
+    
+    let glassButtonGroupFactory = CupertinoGlassButtonGroupFactory(messenger: registrar.messenger())
+    registrar.register(glassButtonGroupFactory, withId: "CupertinoNativeGlassButtonGroup")
+    
+    let liquidGlassContainerFactory = LiquidGlassContainerFactory(messenger: registrar.messenger())
+    registrar.register(liquidGlassContainerFactory, withId: "CupertinoNativeLiquidGlassContainer")
   }
 
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     switch call.method {
     case "getPlatformVersion":
       result("iOS " + UIDevice.current.systemVersion)
+    case "getMajorOSVersion":
+      let version = ProcessInfo.processInfo.operatingSystemVersion
+      result(Int(version.majorVersion))
     default:
       result(FlutterMethodNotImplemented)
     }

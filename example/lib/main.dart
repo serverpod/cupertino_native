@@ -7,8 +7,13 @@ import 'demos/tab_bar.dart';
 import 'demos/icon.dart';
 import 'demos/popup_menu_button.dart';
 import 'demos/button.dart';
+import 'demos/overlay_test.dart';
+import 'demos/app_bar.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Initialize platform version detection early
+  await PlatformVersion.initialize();
   runApp(const MyApp());
 }
 
@@ -212,6 +217,37 @@ class HomePage extends StatelessWidget {
                 onTap: () {
                   Navigator.of(context).push(
                     CupertinoPageRoute(builder: (_) => const TabBarDemoPage()),
+                  );
+                },
+              ),
+              CupertinoListTile(
+                title: Text('App Bar'),
+                leading: CNIcon(
+                  symbol: CNSymbol('rectangle.topthird.inset', color: accentColor),
+                ),
+                trailing: CupertinoListTileChevron(),
+                onTap: () {
+                  Navigator.of(context).push(
+                    CupertinoPageRoute(builder: (_) => const AppBarDemoPage()),
+                  );
+                },
+              ),
+            ],
+          ),
+          CupertinoListSection.insetGrouped(
+            header: Text('Testing'),
+            children: [
+              CupertinoListTile(
+                title: Text('Overlay Test'),
+                leading: CNIcon(
+                  symbol: CNSymbol('square.stack.3d.up', color: accentColor),
+                ),
+                trailing: CupertinoListTileChevron(),
+                onTap: () {
+                  Navigator.of(context).push(
+                    CupertinoPageRoute(
+                      builder: (_) => const OverlayTestPage(),
+                    ),
                   );
                 },
               ),

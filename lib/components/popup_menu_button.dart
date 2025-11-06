@@ -7,6 +7,8 @@ import '../channel/params.dart';
 import '../style/sf_symbol.dart';
 import '../style/button_style.dart';
 import '../utils/icon_renderer.dart';
+import '../utils/version_detector.dart';
+import '../utils/theme_helper.dart';
 
 /// Base type for entries in a [CNPopupMenuButton] menu.
 abstract class CNPopupMenuEntry {
@@ -150,9 +152,9 @@ class _CNPopupMenuButtonState extends State<CNPopupMenuButton> {
   Offset? _downPosition;
   bool _pressed = false;
 
-  bool get _isDark => CupertinoTheme.of(context).brightness == Brightness.dark;
+  bool get _isDark => ThemeHelper.isDark(context);
   Color? get _effectiveTint =>
-      widget.tint ?? CupertinoTheme.of(context).primaryColor;
+      widget.tint ?? ThemeHelper.getPrimaryColor(context);
 
   @override
   void didUpdateWidget(covariant CNPopupMenuButton oldWidget) {
@@ -174,53 +176,15 @@ class _CNPopupMenuButtonState extends State<CNPopupMenuButton> {
 
   @override
   Widget build(BuildContext context) {
-    if (!(defaultTargetPlatform == TargetPlatform.iOS ||
-        defaultTargetPlatform == TargetPlatform.macOS)) {
-      // Fallback Flutter implementation
-      return SizedBox(
-        height: widget.height,
-        width: widget.isIconButton && widget.round
-            ? (widget.width ?? widget.height)
-            : null,
-        child: CupertinoButton(
-          padding: widget.isIconButton
-              ? const EdgeInsets.all(4)
-              : const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          onPressed: () async {
-            final selected = await showCupertinoModalPopup<int>(
-              context: context,
-              builder: (ctx) {
-                return CupertinoActionSheet(
-                  title: widget.buttonLabel != null
-                      ? Text(widget.buttonLabel!)
-                      : null,
-                  actions: [
-                    for (var i = 0; i < widget.items.length; i++)
-                      if (widget.items[i] is CNPopupMenuItem)
-                        CupertinoActionSheetAction(
-                          onPressed: () => Navigator.of(ctx).pop(i),
-                          child: Text(
-                            (widget.items[i] as CNPopupMenuItem).label,
-                          ),
-                        )
-                      else
-                        const SizedBox(height: 8),
-                  ],
-                  cancelButton: CupertinoActionSheetAction(
-                    onPressed: () => Navigator.of(ctx).pop(),
-                    isDefaultAction: true,
-                    child: const Text('Cancel'),
-                  ),
-                );
-              },
-            );
-            if (selected != null) widget.onSelected(selected);
-          },
-          child: widget.isIconButton
-              ? Icon(CupertinoIcons.ellipsis, size: widget.buttonIcon?.size)
-              : Text(widget.buttonLabel ?? ''),
-        ),
-      );
+    // Check if we should use native platform view
+    final isIOSOrMacOS = defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS;
+    final shouldUseNative = isIOSOrMacOS && PlatformVersion.shouldUseNativeGlass;
+
+    // Fallback to Flutter widgets for non-iOS/macOS or iOS/macOS < 26
+    if (!shouldUseNative) {
+      // For both non-iOS/macOS and iOS/macOS < 26, use CupertinoActionSheet
+      return _buildCupertinoFallback(context);
     }
 
     // Priority: imageAsset > customIcon > icon
@@ -457,10 +421,12 @@ class _CNPopupMenuButtonState extends State<CNPopupMenuButton> {
             _setPressed(false);
             _downPosition = null;
           },
-          child: SizedBox(
-            height: widget.height,
-            width: width,
-            child: platformView,
+          child: ClipRect(
+            child: SizedBox(
+              height: widget.height,
+              width: width,
+              child: platformView,
+            ),
           ),
         );
       },
@@ -675,5 +641,53 @@ class _CNPopupMenuButtonState extends State<CNPopupMenuButton> {
     try {
       await ch.invokeMethod('setPressed', {'pressed': pressed});
     } catch (_) {}
+  }
+
+  Widget _buildCupertinoFallback(BuildContext context) {
+    // For iOS/macOS < 26 and non-iOS/macOS, use CupertinoActionSheet
+    return SizedBox(
+      height: widget.height,
+      width: widget.isIconButton && widget.round
+          ? (widget.width ?? widget.height)
+          : null,
+      child: CupertinoButton(
+        padding: widget.isIconButton
+            ? const EdgeInsets.all(4)
+            : const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        onPressed: () async {
+          final selected = await showCupertinoModalPopup<int>(
+            context: context,
+            builder: (ctx) {
+              return CupertinoActionSheet(
+                title: widget.buttonLabel != null
+                    ? Text(widget.buttonLabel!)
+                    : null,
+                actions: [
+                  for (var i = 0; i < widget.items.length; i++)
+                    if (widget.items[i] is CNPopupMenuItem)
+                      CupertinoActionSheetAction(
+                        onPressed: () => Navigator.of(ctx).pop(i),
+                        child: Text(
+                          (widget.items[i] as CNPopupMenuItem).label,
+                        ),
+                      )
+                    else
+                      const SizedBox(height: 8),
+                ],
+                cancelButton: CupertinoActionSheetAction(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  isDefaultAction: true,
+                  child: const Text('Cancel'),
+                ),
+              );
+            },
+          );
+          if (selected != null) widget.onSelected(selected);
+        },
+        child: widget.isIconButton
+            ? Icon(CupertinoIcons.ellipsis, size: widget.buttonIcon?.size)
+            : Text(widget.buttonLabel ?? ''),
+      ),
+    );
   }
 }

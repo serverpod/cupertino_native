@@ -110,6 +110,12 @@ class CupertinoIconPlatformView: NSObject, FlutterPlatformView {
             self.imageData = imageData.data
             self.imageFormat = args["imageFormat"] as? String
             self.assetPath = nil
+          } else if let n = args["name"] as? String {
+            // Handle SF Symbol name in style update
+            self.name = n
+            self.assetPath = nil
+            self.imageData = nil
+            self.imageFormat = nil
           }
           self.rebuild()
           result(nil)

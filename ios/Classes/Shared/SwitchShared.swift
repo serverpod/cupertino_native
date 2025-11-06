@@ -7,14 +7,35 @@ struct CupertinoSwitchView: View {
     let base = Toggle("", isOn: $model.value)
       .labelsHidden()
       .disabled(!model.enabled)
-      .onChange(of: model.value) { newValue in
-        model.onChange(newValue)
-      }
 
-    if #available(iOS 15.0, *) {
-      base.tint(model.tintColor)
+    if #available(iOS 14.0, *) {
+      if #available(iOS 15.0, *) {
+        base
+          .onChange(of: model.value) { newValue in
+            model.onChange(newValue)
+          }
+          .tint(model.tintColor)
+      } else {
+        base
+          .onChange(of: model.value) { newValue in
+            model.onChange(newValue)
+          }
+          .accentColor(model.tintColor)
+      }
     } else {
-      base.accentColor(model.tintColor)
+      if #available(iOS 15.0, *) {
+        base
+          .onReceive(model.$value) { newValue in
+            model.onChange(newValue)
+          }
+          .tint(model.tintColor)
+      } else {
+        base
+          .onReceive(model.$value) { newValue in
+            model.onChange(newValue)
+          }
+          .accentColor(model.tintColor)
+      }
     }
   }
 }

@@ -12,6 +12,11 @@ export 'style/sf_symbol.dart';
 export 'style/button_style.dart';
 export 'style/image_placement.dart';
 export 'components/button.dart';
+export 'components/glass_button_group.dart';
+export 'components/liquid_glass_container.dart';
+export 'utils/version_detector.dart';
+export 'utils/theme_helper.dart';
+export 'style/glass_effect.dart';
 
 import 'cupertino_native_platform_interface.dart';
 

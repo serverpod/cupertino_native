@@ -17,4 +17,13 @@ class MethodChannelCupertinoNative extends CupertinoNativePlatform {
     );
     return version;
   }
+
+  @override
+  /// See [CupertinoNativePlatform.getMajorOSVersion].
+  Future<int?> getMajorOSVersion() async {
+    final version = await methodChannel.invokeMethod<int>(
+      'getMajorOSVersion',
+    );
+    return version;
+  }
 }

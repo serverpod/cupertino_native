@@ -29,4 +29,9 @@ abstract class CupertinoNativePlatform extends PlatformInterface {
   Future<String?> getPlatformVersion() {
     throw UnimplementedError('platformVersion() has not been implemented.');
   }
+
+  /// Retrieves the major OS version number (e.g., 26 for iOS 26.0, 15 for macOS 15.0).
+  Future<int?> getMajorOSVersion() {
+    throw UnimplementedError('getMajorOSVersion() has not been implemented.');
+  }
 }

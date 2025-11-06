@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import '../channel/params.dart';
 import '../style/sf_symbol.dart';
 import '../utils/icon_renderer.dart';
+import '../utils/version_detector.dart';
+import '../utils/theme_helper.dart';
 
 /// A platform-rendered SF Symbol icon, custom image asset, or IconData.
 ///
@@ -66,7 +68,7 @@ class _CNIconState extends State<CNIcon> {
   bool? _lastGradient;
   // No intrinsic sizing storage; icons use explicit size.
 
-  bool get _isDark => CupertinoTheme.of(context).brightness == Brightness.dark;
+  bool get _isDark => ThemeHelper.isDark(context);
 
   @override
   void didChangeDependencies() {
@@ -88,6 +90,16 @@ class _CNIconState extends State<CNIcon> {
 
   @override
   Widget build(BuildContext context) {
+    // Check if we should use native platform view
+    final isIOSOrMacOS = defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS;
+    final shouldUseNative = isIOSOrMacOS && PlatformVersion.shouldUseNativeGlass;
+
+    // Fallback to Flutter widgets for non-iOS/macOS or iOS/macOS < 26
+    if (!shouldUseNative) {
+      return _buildFlutterIcon(context);
+    }
+
     // Priority: imageAsset > customIcon > symbol
     
     // Handle image asset (highest priority)
@@ -195,7 +207,9 @@ class _CNIconState extends State<CNIcon> {
         (imageAsset?.size ?? widget.symbol?.size ?? 24.0);
     final h = widget.height ?? fallbackSize;
     final w = fallbackSize;
-    return SizedBox(width: w, height: h, child: platformView);
+    return ClipRect(
+      child: SizedBox(width: w, height: h, child: platformView),
+    );
   }
 
   void _onPlatformViewCreated(int id) {
@@ -293,31 +307,50 @@ class _CNIconState extends State<CNIcon> {
       _lastName = name;
     }
 
+    // Track if any style properties changed
+    bool hasStyleChanges = false;
     final style = <String, dynamic>{};
+
     if (_lastSize != size) {
       style['iconSize'] = size;
       _lastSize = size;
+      hasStyleChanges = true;
     }
-    if (_lastColor != color && color != null) {
-      style['iconColor'] = color;
+    if (_lastColor != color) {
+      if (color != null) {
+        style['iconColor'] = color;
+      }
       _lastColor = color;
+      hasStyleChanges = true;
     }
-    if (_lastMode != mode && mode != null) {
-      style['iconRenderingMode'] = mode;
+    if (_lastMode != mode) {
+      if (mode != null) {
+        style['iconRenderingMode'] = mode;
+      }
       _lastMode = mode;
+      hasStyleChanges = true;
     }
-    if (_lastGradient != gradient && gradient != null) {
-      style['iconGradientEnabled'] = gradient;
+    if (_lastGradient != gradient) {
+      if (gradient != null) {
+        style['iconGradientEnabled'] = gradient;
+      }
       _lastGradient = gradient;
+      hasStyleChanges = true;
     }
-    
-    // Add imageAsset properties if using imageAsset
-    if (widget.imageAsset != null) {
-      style['assetPath'] = widget.imageAsset!.assetPath;
-      style['imageData'] = widget.imageAsset!.imageData;
-      style['imageFormat'] = widget.imageAsset!.imageFormat;
+
+    // If any style changed, include the icon source to prevent disappearing icons
+    if (hasStyleChanges) {
+      // Add imageAsset properties if using imageAsset
+      if (widget.imageAsset != null) {
+        style['assetPath'] = widget.imageAsset!.assetPath;
+        style['imageData'] = widget.imageAsset!.imageData;
+        style['imageFormat'] = widget.imageAsset!.imageFormat;
+      } else if (widget.symbol != null) {
+        // Include the symbol name so native side knows what to render
+        style['name'] = widget.symbol!.name;
+      }
     }
-    
+
     if (style.isNotEmpty) {
       await channel.invokeMethod('setStyle', style);
     }
@@ -331,5 +364,43 @@ class _CNIconState extends State<CNIcon> {
       await channel.invokeMethod('setBrightness', {'isDark': isDark});
       _lastIsDark = isDark;
     }
+  }
+
+  Widget _buildFlutterIcon(BuildContext context) {
+    // For fallback, use Flutter Icon widget
+    Widget? iconWidget;
+    
+    if (widget.imageAsset != null) {
+      // For image assets in fallback, use a placeholder
+      iconWidget = Icon(
+        CupertinoIcons.circle_fill,
+        size: widget.imageAsset!.size,
+        color: widget.imageAsset!.color ?? widget.color,
+      );
+    } else if (widget.customIcon != null) {
+      iconWidget = Icon(
+        widget.customIcon,
+        size: widget.size ?? widget.symbol?.size ?? 24.0,
+        color: widget.color,
+      );
+    } else if (widget.symbol != null) {
+      // For SF Symbols, use a placeholder Cupertino icon
+      iconWidget = Icon(
+        CupertinoIcons.circle_fill,
+        size: widget.size ?? widget.symbol!.size,
+        color: widget.color ?? widget.symbol?.color,
+      );
+    } else {
+      // Fallback to a generic icon
+      iconWidget = Icon(
+        CupertinoIcons.circle_fill,
+        size: widget.size ?? 24.0,
+        color: widget.color,
+      );
+    }
+    
+    final h = widget.height ?? widget.size ?? 24.0;
+    final w = widget.size ?? 24.0;
+    return SizedBox(width: w, height: h, child: iconWidget);
   }
 }

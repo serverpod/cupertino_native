@@ -37,6 +37,21 @@ You will also need to install the Xcode 26 beta and use `xcode-select` to set it
 sudo xcode-select -s /Applications/Xcode-beta.app
 ```
 
+### Initialization
+
+For Liquid Glass effects to work properly, initialize platform version detection early in your app:
+
+```dart
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Initialize platform version detection early
+  await PlatformVersion.initialize();
+  runApp(const MyApp());
+}
+```
+
+This ensures proper version detection for conditional Liquid Glass feature availability.
+
 ## What's in the package
 
 This package ships a handful of native Liquid Glass widgets. Each widget exposes a simple, Flutter‑friendly API and falls back to a reasonable Flutter implementation on non‑Apple platforms.
@@ -124,6 +139,7 @@ CNButton(
 - Customizable image padding (spacing between image and text)
 - Customizable horizontal padding (internal button spacing)
 - Supports SVG assets, custom icons (IconData), and SF Symbols with unified priority system
+- Liquid Glass effects with union IDs, effect IDs, and interactive effects (iOS 26+ and macOS 26+)
 
 ### Icon (SF Symbols)
 
@@ -179,6 +195,173 @@ CNTabBar(
   onTap: (i) => setState(() => _tabIndex = i),
 )
 ```
+
+## Liquid Glass Effects (iOS 26+ & macOS 26+)
+
+This package provides native Liquid Glass effects for iOS 26+ and macOS 26+. Liquid Glass effects create beautiful, blurry, translucent surfaces that blend seamlessly with their backgrounds.
+
+### Liquid Glass Container
+
+Apply Liquid Glass effects to any widget using the `liquidGlass()` extension method:
+
+```dart
+// Simple glass effect
+Text('Hello, World!').liquidGlass()
+
+// Rectangle shape with corner radius
+Text('Hello, World!').liquidGlass(
+  shape: CNGlassEffectShape.rect,
+  cornerRadius: 16.0,
+)
+
+// Tinted and interactive glass effect
+Text('Hello, World!').liquidGlass(
+  effect: CNGlassEffect.regular,
+  tint: CupertinoColors.systemOrange,
+  interactive: true,
+)
+
+// Prominent glass effect with circle shape
+Container(
+  width: 100,
+  height: 100,
+  child: Center(child: Text('Circle')),
+).liquidGlass(
+  effect: CNGlassEffect.prominent,
+  shape: CNGlassEffectShape.circle,
+)
+```
+
+**Liquid Glass Configuration:**
+- **Effect variants:** `regular` (standard blur) or `prominent` (enhanced blur)
+- **Shapes:** `capsule` (default), `rect` (with corner radius), or `circle`
+- **Tint colors:** Optional color tinting for the glass effect
+- **Interactive:** Makes the glass effect respond to touch/pointer interactions
+
+### Glass Button Group
+
+Group buttons together for proper Liquid Glass blending effects. Buttons in a group can blend together when using `glassEffectUnionId`:
+
+```dart
+CNGlassButtonGroup(
+  axis: Axis.horizontal,
+  spacing: 8.0,
+  spacingForGlass: 40.0,
+  buttons: [
+    CNButton(
+      label: 'Home',
+      imageAsset: CNImageAsset('assets/icons/home.svg', size: 16),
+      onPressed: () {},
+      config: const CNButtonConfig(
+        style: CNButtonStyle.glass,
+        glassEffectUnionId: 'toolbar-group',
+        glassEffectId: 'toolbar-home',
+      ),
+    ),
+    CNButton(
+      label: 'Search',
+      imageAsset: CNImageAsset('assets/icons/search.svg', size: 16),
+      onPressed: () {},
+      config: const CNButtonConfig(
+        style: CNButtonStyle.glass,
+        glassEffectUnionId: 'toolbar-group',
+        glassEffectId: 'toolbar-search',
+      ),
+    ),
+    CNButton(
+      label: 'Profile',
+      imageAsset: CNImageAsset('assets/icons/profile.svg', size: 16),
+      onPressed: () {},
+      config: const CNButtonConfig(
+        style: CNButtonStyle.glass,
+        glassEffectUnionId: 'toolbar-group',
+        glassEffectId: 'toolbar-profile',
+      ),
+    ),
+  ],
+)
+```
+
+**Glass Button Group Features:**
+- **Horizontal or vertical layouts:** Control button arrangement with `axis`
+- **Spacing control:** `spacing` controls layout spacing, `spacingForGlass` controls blending distance
+- **Union IDs:** Buttons with the same `glassEffectUnionId` blend together
+- **Effect IDs:** Buttons with the same `glassEffectId` can morph into each other during transitions
+- **Interactive effects:** Enable `glassEffectInteractive` for real-time touch/pointer responses
+
+### Glass Button Styles
+
+Buttons support two new glass styles for iOS 26+ and macOS 26+:
+
+```dart
+// Regular glass button
+CNButton(
+  label: 'Glass',
+  onPressed: () {},
+  config: const CNButtonConfig(
+    style: CNButtonStyle.glass,
+  ),
+)
+
+// Prominent glass button (more prominent blur)
+CNButton(
+  label: 'Prominent Glass',
+  onPressed: () {},
+  config: const CNButtonConfig(
+    style: CNButtonStyle.prominentGlass,
+  ),
+)
+
+// Glass button with interactive effect
+CNButton(
+  label: 'Interactive',
+  onPressed: () {},
+  config: const CNButtonConfig(
+    style: CNButtonStyle.glass,
+    glassEffectInteractive: true,
+  ),
+)
+
+// Glass buttons with morphing transitions
+CNGlassButtonGroup(
+  axis: Axis.horizontal,
+  spacing: 24.0,
+  spacingForGlass: 24.0,
+  buttons: [
+    CNButton(
+      label: 'Morph Button 1',
+      onPressed: () {},
+      config: const CNButtonConfig(
+        style: CNButtonStyle.glass,
+        glassEffectId: 'morph-button', // Same ID = morphing
+      ),
+    ),
+    CNButton(
+      label: 'Morph Button 2',
+      onPressed: () {},
+      config: const CNButtonConfig(
+        style: CNButtonStyle.glass,
+        glassEffectId: 'morph-button', // Same ID = morphing
+      ),
+    ),
+  ],
+)
+```
+
+### Platform Version Detection
+
+Liquid Glass effects require iOS 26+ or macOS 26+. The package automatically detects platform versions and falls back gracefully on older versions. Initialize version detection early in your app:
+
+```dart
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Initialize platform version detection early
+  await PlatformVersion.initialize();
+  runApp(const MyApp());
+}
+```
+
+On unsupported platforms or versions, glass effects are automatically disabled and widgets render normally.
 
 ## Custom Icons & SVG Support
 
@@ -356,15 +539,15 @@ CNTabBar(
 ```
 
 ## What's left to do?
-This package has evolved significantly and now provides comprehensive native widget support. Future improvements include:
+This package has evolved significantly and now provides comprehensive native widget support with Liquid Glass effects. Future improvements include:
 
 - Adding more native components (DatePicker, ActionSheet, etc.)
 - Extending SVG support to remaining components (SegmentedControl, Slider, Switch)
 - Reviewing the Flutter APIs to ensure consistency and eliminate redundancies
 - Extending the flexibility and styling options of the widgets
 - Investigate how to best combine scroll views with the native components
-- macOS compiles and runs, but it's untested with Liquid Glass and generally doesn't look great
 - Performance optimizations for SVG rendering and caching
+- Additional Liquid Glass effect variants and configurations
 
 ## How was this done?
 Pretty much vibe-coded with Codex and GPT-5. 😅

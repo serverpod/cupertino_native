@@ -4,12 +4,19 @@ struct CupertinoSliderView: View {
   @ObservedObject var model: SliderModel
 
   var body: some View {
-    Slider(value: $model.value, in: model.min...model.max)
+    let slider = Slider(value: $model.value, in: model.min...model.max)
       .disabled(!model.enabled)
-      .onChange(of: model.value) { newValue in
+      .accentColor(model.tintColor)
+
+    if #available(iOS 14.0, *) {
+      slider.onChange(of: model.value) { newValue in
         model.onChange(newValue)
       }
-      .accentColor(model.tintColor)
+    } else {
+      slider.onReceive(model.$value) { newValue in
+        model.onChange(newValue)
+      }
+    }
   }
 }
 

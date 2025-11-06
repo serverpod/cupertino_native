@@ -31,7 +31,7 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   CocoaLumberjack: 5644158777912b7de7469fa881f8a3f259c2512a
-  cupertino_native: a0229f287d6ea5cc9e5e25982faed5987b35b24d
+  cupertino_native: cea57846733e10e3b344015a0e243697f046a86f
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   integration_test: 4a889634ef21a45d28d50d622cf412dc6d9f586e
   SVGKit: 1ad7513f8c74d9652f94ed64ddecda1a23864dea

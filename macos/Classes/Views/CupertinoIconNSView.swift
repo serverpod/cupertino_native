@@ -69,6 +69,8 @@ class CupertinoIconNSView: NSView {
           if let arr = args["iconPaletteColors"] as? [NSNumber] { self.palette = arr.map { Self.colorFromARGB($0.intValue) } }
           if let mode = args["iconRenderingMode"] as? String { self.renderingMode = mode }
           if let g = args["iconGradientEnabled"] as? NSNumber { self.gradientEnabled = g.boolValue }
+          // Handle SF Symbol name in style update to prevent disappearing icons
+          if let n = args["name"] as? String { self.name = n }
           self.rebuild()
           result(nil)
         } else { result(FlutterError(code: "bad_args", message: "Missing style", details: nil)) }

@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import '../channel/params.dart';
 import '../style/sf_symbol.dart';
 import '../utils/icon_renderer.dart';
+import '../utils/version_detector.dart';
+import '../utils/theme_helper.dart';
 
 /// Immutable data describing a single tab bar item.
 class CNTabBarItem {
@@ -147,9 +149,9 @@ class _CNTabBarState extends State<CNTabBar> {
   int? _lastRightCount;
   double? _lastSplitSpacing;
 
-  bool get _isDark => CupertinoTheme.of(context).brightness == Brightness.dark;
+  bool get _isDark => ThemeHelper.isDark(context);
   Color? get _effectiveTint =>
-      widget.tint ?? CupertinoTheme.of(context).primaryColor;
+      widget.tint ?? ThemeHelper.getPrimaryColor(context);
 
   @override
   void didUpdateWidget(covariant CNTabBar oldWidget) {
@@ -165,9 +167,14 @@ class _CNTabBarState extends State<CNTabBar> {
 
   @override
   Widget build(BuildContext context) {
-    if (!(defaultTargetPlatform == TargetPlatform.iOS ||
-        defaultTargetPlatform == TargetPlatform.macOS)) {
-      // Simple Flutter fallback using CupertinoTabBar for non-Apple platforms.
+    // Check if we should use native platform view
+    final isIOSOrMacOS = defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS;
+    final shouldUseNative = isIOSOrMacOS && PlatformVersion.shouldUseNativeGlass;
+
+    // Fallback to Flutter widgets for non-iOS/macOS or iOS/macOS < 26
+    if (!shouldUseNative) {
+      // For both non-iOS/macOS and iOS/macOS < 26, use CupertinoTabBar
       return SizedBox(
         height: widget.height,
         child: CupertinoTabBar(
@@ -184,7 +191,7 @@ class _CNTabBarState extends State<CNTabBar> {
           onTap: widget.onTap,
           backgroundColor: widget.backgroundColor,
           inactiveColor: CupertinoColors.inactiveGray,
-          activeColor: widget.tint ?? CupertinoTheme.of(context).primaryColor,
+          activeColor: widget.tint ?? ThemeHelper.getPrimaryColor(context),
         ),
       );
     }
@@ -320,9 +327,13 @@ class _CNTabBarState extends State<CNTabBar> {
     final h = widget.height ?? _intrinsicHeight ?? 50.0;
     if (!widget.split && widget.shrinkCentered) {
       final w = _intrinsicWidth;
-      return SizedBox(height: h, width: w, child: platformView);
+      return ClipRect(
+        child: SizedBox(height: h, width: w, child: platformView),
+      );
     }
-    return SizedBox(height: h, child: platformView);
+    return ClipRect(
+      child: SizedBox(height: h, child: platformView),
+    );
   }
 
   void _onCreated(int id) {

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/gestures.dart';
 import '../channel/params.dart';
+import '../utils/version_detector.dart';
+import '../utils/theme_helper.dart';
 
 /// Controller for a [CNSwitch] that allows imperative updates from Dart
 /// to the underlying native UISwitch/NSSwitch instance.
@@ -82,7 +84,7 @@ class _CNSwitchState extends State<CNSwitch> {
   bool? _lastEnabled;
   bool? _lastIsDark;
   int? _lastTint;
-  bool get _isDark => CupertinoTheme.of(context).brightness == Brightness.dark;
+  bool get _isDark => ThemeHelper.isDark(context);
 
   CNSwitchController? _internalController;
 
@@ -90,7 +92,7 @@ class _CNSwitchState extends State<CNSwitch> {
       widget.controller ?? (_internalController ??= CNSwitchController());
 
   Color? get _effectiveColor =>
-      widget.color ?? CupertinoTheme.of(context).primaryColor;
+      widget.color ?? ThemeHelper.getPrimaryColor(context);
 
   @override
   void dispose() {
@@ -113,14 +115,31 @@ class _CNSwitchState extends State<CNSwitch> {
 
   @override
   Widget build(BuildContext context) {
-    // Fallback to Flutter Switch on unsupported platforms.
-    if (!(defaultTargetPlatform == TargetPlatform.iOS ||
-        defaultTargetPlatform == TargetPlatform.macOS)) {
+    // Check if we should use native platform view
+    final isIOSOrMacOS = defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS;
+    final shouldUseNative = isIOSOrMacOS && PlatformVersion.shouldUseNativeGlass;
+
+    // Fallback to Flutter widgets for non-iOS/macOS or iOS/macOS < 26
+    if (!shouldUseNative) {
+      // For non-iOS/macOS, use Material Switch
+      if (!isIOSOrMacOS) {
       return SizedBox(
         height: widget.height,
         child: Switch(
           value: widget.value,
           onChanged: widget.enabled ? widget.onChanged : null,
+          ),
+        );
+      }
+      
+      // For iOS/macOS < 26, use CupertinoSwitch
+      return SizedBox(
+        height: widget.height,
+        child: CupertinoSwitch(
+          value: widget.value,
+          onChanged: widget.enabled ? widget.onChanged : null,
+          activeColor: _effectiveColor,
         ),
       );
     }
@@ -146,10 +165,32 @@ class _CNSwitchState extends State<CNSwitch> {
     };
 
     if (defaultTargetPlatform == TargetPlatform.iOS) {
-      return SizedBox(
+      return ClipRect(
+        child: SizedBox(
+          height: widget.height,
+          width: width,
+          child: UiKitView(
+            viewType: viewType,
+            creationParamsCodec: const StandardMessageCodec(),
+            creationParams: creationParams,
+            onPlatformViewCreated: _onPlatformViewCreated,
+            gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+              Factory<HorizontalDragGestureRecognizer>(
+                () => HorizontalDragGestureRecognizer(),
+              ),
+              Factory<TapGestureRecognizer>(() => TapGestureRecognizer()),
+            },
+          ),
+        ),
+      );
+    }
+
+    // macOS
+    return ClipRect(
+      child: SizedBox(
         height: widget.height,
         width: width,
-        child: UiKitView(
+        child: AppKitView(
           viewType: viewType,
           creationParamsCodec: const StandardMessageCodec(),
           creationParams: creationParams,
@@ -161,24 +202,6 @@ class _CNSwitchState extends State<CNSwitch> {
             Factory<TapGestureRecognizer>(() => TapGestureRecognizer()),
           },
         ),
-      );
-    }
-
-    // macOS
-    return SizedBox(
-      height: widget.height,
-      width: width,
-      child: AppKitView(
-        viewType: viewType,
-        creationParamsCodec: const StandardMessageCodec(),
-        creationParams: creationParams,
-        onPlatformViewCreated: _onPlatformViewCreated,
-        gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
-          Factory<HorizontalDragGestureRecognizer>(
-            () => HorizontalDragGestureRecognizer(),
-          ),
-          Factory<TapGestureRecognizer>(() => TapGestureRecognizer()),
-        },
       ),
     );
   }

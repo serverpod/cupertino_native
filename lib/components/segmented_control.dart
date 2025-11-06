@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 
 import '../channel/params.dart';
 import '../style/sf_symbol.dart';
+import '../utils/version_detector.dart';
+import '../utils/theme_helper.dart';
 
 /// A Cupertino-native segmented control.
 ///
@@ -80,7 +82,7 @@ class _CNSegmentedControlState extends State<CNSegmentedControl> {
   int? _lastTint;
   double? _intrinsicWidth;
 
-  bool get _isDark => CupertinoTheme.of(context).brightness == Brightness.dark;
+  bool get _isDark => ThemeHelper.isDark(context);
 
   @override
   void dispose() {
@@ -102,8 +104,14 @@ class _CNSegmentedControlState extends State<CNSegmentedControl> {
 
   @override
   Widget build(BuildContext context) {
-    if (!(defaultTargetPlatform == TargetPlatform.iOS ||
-        defaultTargetPlatform == TargetPlatform.macOS)) {
+    // Check if we should use native platform view
+    final isIOSOrMacOS = defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS;
+    final shouldUseNative = isIOSOrMacOS && PlatformVersion.shouldUseNativeGlass;
+
+    // Fallback to Flutter widgets for non-iOS/macOS or iOS/macOS < 26
+    if (!shouldUseNative) {
+      // For both non-iOS/macOS and iOS/macOS < 26, use CupertinoSegmentedControl
       return SizedBox(
         height: widget.height,
         child: CupertinoSegmentedControl<int>(
@@ -185,15 +193,19 @@ class _CNSegmentedControlState extends State<CNSegmentedControl> {
     if (widget.shrinkWrap) {
       final width = _intrinsicWidth;
       return Center(
-        child: SizedBox(
-          height: widget.height,
-          width: width, // if null, stretches initially until measured
-          child: platformView,
+        child: ClipRect(
+          child: SizedBox(
+            height: widget.height,
+            width: width, // if null, stretches initially until measured
+            child: platformView,
+          ),
         ),
       );
     }
 
-    return SizedBox(height: widget.height, child: platformView);
+    return ClipRect(
+      child: SizedBox(height: widget.height, child: platformView),
+    );
   }
 
   void _onPlatformViewCreated(int id) {

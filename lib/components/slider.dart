@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/gestures.dart';
 import '../channel/params.dart';
+import '../utils/version_detector.dart';
+import '../utils/theme_helper.dart';
 
 /// Controller for a [CNSlider] allowing imperative changes to the native
 /// NSSlider/UISlider instance.
@@ -118,7 +120,7 @@ class _CNSliderState extends State<CNSlider> {
   int? _lastTrackTint;
   int? _lastTrackBgTint;
   double? _lastStep;
-  bool get _isDark => CupertinoTheme.of(context).brightness == Brightness.dark;
+  bool get _isDark => ThemeHelper.isDark(context);
 
   CNSliderController? _internalController;
 
@@ -131,7 +133,7 @@ class _CNSliderState extends State<CNSlider> {
   Color? get _effectiveTrackTint =>
       widget.trackColor ??
       widget.color ??
-      CupertinoTheme.of(context).primaryColor;
+      ThemeHelper.getPrimaryColor(context);
   Color? get _effectiveThumbTint => widget.thumbColor;
   Color? get _effectiveTrackBgTint => widget.trackBackgroundColor;
 
@@ -157,9 +159,15 @@ class _CNSliderState extends State<CNSlider> {
 
   @override
   Widget build(BuildContext context) {
-    // Fallback to Flutter Slider on unsupported platforms.
-    if (!(defaultTargetPlatform == TargetPlatform.iOS ||
-        defaultTargetPlatform == TargetPlatform.macOS)) {
+    // Check if we should use native platform view
+    final isIOSOrMacOS = defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS;
+    final shouldUseNative = isIOSOrMacOS && PlatformVersion.shouldUseNativeGlass;
+
+    // Fallback to Flutter widgets for non-iOS/macOS or iOS/macOS < 26
+    if (!shouldUseNative) {
+      // For non-iOS/macOS, use Material Slider
+      if (!isIOSOrMacOS) {
       return SizedBox(
         height: widget.height,
         width: double.infinity,
@@ -168,6 +176,21 @@ class _CNSliderState extends State<CNSlider> {
           min: widget.min,
           max: widget.max,
           onChanged: widget.enabled ? widget.onChanged : null,
+          ),
+        );
+      }
+      
+      // For iOS/macOS < 26, use CupertinoSlider
+      return SizedBox(
+        height: widget.height,
+        width: double.infinity,
+        child: CupertinoSlider(
+          value: widget.value.clamp(widget.min, widget.max).toDouble(),
+          min: widget.min,
+          max: widget.max,
+          onChanged: widget.enabled ? widget.onChanged : null,
+          activeColor: _effectiveTrackTint ?? CupertinoColors.activeBlue,
+          thumbColor: _effectiveThumbTint ?? CupertinoColors.white,
         ),
       );
     }
@@ -190,16 +213,40 @@ class _CNSliderState extends State<CNSlider> {
     };
 
     if (defaultTargetPlatform == TargetPlatform.iOS) {
-      return SizedBox(
+      return ClipRect(
+        child: SizedBox(
+          height: widget.height,
+          width: double.infinity,
+          child: UiKitView(
+            viewType: viewType,
+            creationParamsCodec: const StandardMessageCodec(),
+            creationParams: creationParams,
+            onPlatformViewCreated: _onPlatformViewCreated,
+            // Forward horizontal drags and taps to the native slider so it
+            // works correctly inside Flutter scroll views.
+            gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+              Factory<HorizontalDragGestureRecognizer>(
+                () => HorizontalDragGestureRecognizer(),
+              ),
+              Factory<TapGestureRecognizer>(() => TapGestureRecognizer()),
+            },
+          ),
+        ),
+      );
+    }
+
+    // macOS
+    return ClipRect(
+      child: SizedBox(
         height: widget.height,
         width: double.infinity,
-        child: UiKitView(
+        // AppKitView is available on macOS to host NSView platform views.
+        child: AppKitView(
           viewType: viewType,
           creationParamsCodec: const StandardMessageCodec(),
           creationParams: creationParams,
           onPlatformViewCreated: _onPlatformViewCreated,
-          // Forward horizontal drags and taps to the native slider so it
-          // works correctly inside Flutter scroll views.
+          // Mirror iOS behavior: allow horizontal drag/tap gestures through.
           gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
             Factory<HorizontalDragGestureRecognizer>(
               () => HorizontalDragGestureRecognizer(),
@@ -207,26 +254,6 @@ class _CNSliderState extends State<CNSlider> {
             Factory<TapGestureRecognizer>(() => TapGestureRecognizer()),
           },
         ),
-      );
-    }
-
-    // macOS
-    return SizedBox(
-      height: widget.height,
-      width: double.infinity,
-      // AppKitView is available on macOS to host NSView platform views.
-      child: AppKitView(
-        viewType: viewType,
-        creationParamsCodec: const StandardMessageCodec(),
-        creationParams: creationParams,
-        onPlatformViewCreated: _onPlatformViewCreated,
-        // Mirror iOS behavior: allow horizontal drag/tap gestures through.
-        gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
-          Factory<HorizontalDragGestureRecognizer>(
-            () => HorizontalDragGestureRecognizer(),
-          ),
-          Factory<TapGestureRecognizer>(() => TapGestureRecognizer()),
-        },
       ),
     );
   }
