@@ -11,6 +11,7 @@ class CupertinoPopupMenuButtonPlatformView: NSObject, FlutterPlatformView {
   private var symbols: [String] = []
   private var dividers: [Bool] = []
   private var enabled: [Bool] = []
+  private var checked: [Bool] = []
   private var itemSizes: [NSNumber] = []
   private var itemColors: [NSNumber] = []
   private var itemModes: [String?] = []
@@ -22,6 +23,7 @@ class CupertinoPopupMenuButtonPlatformView: NSObject, FlutterPlatformView {
   private var btnIconColor: UIColor? = nil
   private var btnIconMode: String? = nil
   private var btnIconPalette: [UIColor] = []
+  private var isTransparentOverlay: Bool = false
 
   init(frame: CGRect, viewId: Int64, args: Any?, messenger: FlutterBinaryMessenger) {
     self.channel = FlutterMethodChannel(name: "CupertinoNativePopupMenuButton_\(viewId)", binaryMessenger: messenger)
@@ -40,12 +42,15 @@ class CupertinoPopupMenuButtonPlatformView: NSObject, FlutterPlatformView {
     var symbols: [String] = []
     var dividers: [NSNumber] = []
     var enabled: [NSNumber] = []
+    var checkedNums: [NSNumber] = []
     var sizes: [NSNumber] = []
     var colors: [NSNumber] = []
     var buttonIconMode: String? = nil
     var buttonIconPalette: [NSNumber] = []
+    var transparentOverlay: Bool = false
 
     if let dict = args as? [String: Any] {
+      if let t = dict["transparentOverlay"] as? NSNumber { transparentOverlay = t.boolValue }
       if let t = dict["buttonTitle"] as? String { title = t }
       if let s = dict["buttonIconName"] as? String { iconName = s }
       if let s = dict["buttonIconSize"] as? NSNumber { iconSize = CGFloat(truncating: s) }
@@ -58,6 +63,7 @@ class CupertinoPopupMenuButtonPlatformView: NSObject, FlutterPlatformView {
       symbols = (dict["sfSymbols"] as? [String]) ?? []
       dividers = (dict["isDivider"] as? [NSNumber]) ?? []
       enabled = (dict["enabled"] as? [NSNumber]) ?? []
+      checkedNums = (dict["checked"] as? [NSNumber]) ?? []
       sizes = (dict["sfSymbolSizes"] as? [NSNumber]) ?? []
       colors = (dict["sfSymbolColors"] as? [NSNumber]) ?? []
       if let modes = dict["sfSymbolRenderingModes"] as? [String?] { self.itemModes = modes }
@@ -69,6 +75,8 @@ class CupertinoPopupMenuButtonPlatformView: NSObject, FlutterPlatformView {
 
     super.init()
 
+    self.isTransparentOverlay = transparentOverlay
+
     container.backgroundColor = .clear
     if #available(iOS 13.0, *) { container.overrideUserInterfaceStyle = isDark ? .dark : .light }
 
@@ -76,6 +84,19 @@ class CupertinoPopupMenuButtonPlatformView: NSObject, FlutterPlatformView {
     // Choose a visible default tint if none provided
     if let t = tint { button.tintColor = t }
     else if #available(iOS 13.0, *) { button.tintColor = .label }
+
+    // Make button transparent when in overlay mode
+    if transparentOverlay {
+      button.backgroundColor = .clear
+      button.setTitle("", for: .normal)
+      button.setImage(nil, for: .normal)
+      if #available(iOS 15.0, *) {
+        var cfg = UIButton.Configuration.plain()
+        cfg.background.backgroundColor = .clear
+        cfg.baseForegroundColor = .clear
+        button.configuration = cfg
+      }
+    }
 
     // Add button and pin to container
     container.addSubview(button)
@@ -91,39 +112,44 @@ class CupertinoPopupMenuButtonPlatformView: NSObject, FlutterPlatformView {
     self.symbols = symbols
     self.dividers = dividers.map { $0.boolValue }
     self.enabled = enabled.map { $0.boolValue }
+    self.checked = checkedNums.map { $0.boolValue }
 
     self.isRoundButton = makeRound
     applyButtonStyle(buttonStyle: buttonStyle, round: makeRound)
     currentButtonStyle = buttonStyle
-    // Now set content (title/image) using configuration when available
-    // Cache current icon props for state updates
-    self.btnIconName = iconName
-    self.btnIconSize = iconSize
-    self.btnIconColor = iconColor
-    self.btnIconMode = buttonIconMode
-    if !buttonIconPalette.isEmpty { self.btnIconPalette = buttonIconPalette.map { Self.colorFromARGB($0.intValue) } }
-    // Apply content initially
-    setButtonContent(title: title, image: makeButtonIconImage(), iconOnly: (title == nil))
-    if #available(iOS 15.0, *), var cfg = button.configuration {
-      // Prefer explicit icon mode/color if provided
-      if let symCfg = makeButtonSymbolConfiguration() {
-        cfg.preferredSymbolConfigurationForImage = symCfg
-      } else if let t = tint, btnIconColor == nil, btnIconMode == nil {
-        // Fallback: color the symbol using current button tint if no explicit color/mode
-        cfg.preferredSymbolConfigurationForImage = UIImage.SymbolConfiguration(hierarchicalColor: t)
+    
+    // Skip button content setup when in transparent overlay mode
+    if !transparentOverlay {
+      // Now set content (title/image) using configuration when available
+      // Cache current icon props for state updates
+      self.btnIconName = iconName
+      self.btnIconSize = iconSize
+      self.btnIconColor = iconColor
+      self.btnIconMode = buttonIconMode
+      if !buttonIconPalette.isEmpty { self.btnIconPalette = buttonIconPalette.map { Self.colorFromARGB($0.intValue) } }
+      // Apply content initially
+      setButtonContent(title: title, image: makeButtonIconImage(), iconOnly: (title == nil))
+      if #available(iOS 15.0, *), var cfg = button.configuration {
+        // Prefer explicit icon mode/color if provided
+        if let symCfg = makeButtonSymbolConfiguration() {
+          cfg.preferredSymbolConfigurationForImage = symCfg
+        } else if let t = tint, btnIconColor == nil, btnIconMode == nil {
+          // Fallback: color the symbol using current button tint if no explicit color/mode
+          cfg.preferredSymbolConfigurationForImage = UIImage.SymbolConfiguration(hierarchicalColor: t)
+        }
+        button.configuration = cfg
       }
-      button.configuration = cfg
-    }
 
-    // Ensure the image persists across configuration state changes (highlight/menu)
-    if #available(iOS 15.0, *) {
-      button.configurationUpdateHandler = { [weak self] btn in
-        guard let self = self else { return }
-        var cfg = btn.configuration ?? .plain()
-        // Preserve existing title; just re-apply image
-        cfg.image = self.makeButtonIconImage()
-        cfg.preferredSymbolConfigurationForImage = self.makeButtonSymbolConfiguration()
-        btn.configuration = cfg
+      // Ensure the image persists across configuration state changes (highlight/menu)
+      if #available(iOS 15.0, *) {
+        button.configurationUpdateHandler = { [weak self] btn in
+          guard let self = self else { return }
+          var cfg = btn.configuration ?? .plain()
+          // Preserve existing title; just re-apply image
+          cfg.image = self.makeButtonIconImage()
+          cfg.preferredSymbolConfigurationForImage = self.makeButtonSymbolConfiguration()
+          btn.configuration = cfg
+        }
       }
     }
 
@@ -148,6 +174,7 @@ class CupertinoPopupMenuButtonPlatformView: NSObject, FlutterPlatformView {
           self.symbols = (args["sfSymbols"] as? [String]) ?? []
           self.dividers = ((args["isDivider"] as? [NSNumber]) ?? []).map { $0.boolValue }
           self.enabled = ((args["enabled"] as? [NSNumber]) ?? []).map { $0.boolValue }
+          self.checked = ((args["checked"] as? [NSNumber]) ?? []).map { $0.boolValue }
           let sizes = (args["sfSymbolSizes"] as? [NSNumber]) ?? []
           let colors = (args["sfSymbolColors"] as? [NSNumber]) ?? []
           self.itemSizes = sizes
@@ -281,7 +308,13 @@ class CupertinoPopupMenuButtonPlatformView: NSObject, FlutterPlatformView {
           }
         }
         let isEnabled = i < enabled.count ? enabled[i] : true
-        let action = UIAction(title: title, image: image, attributes: isEnabled ? [] : [.disabled]) { [weak self] _ in
+        let isChecked = i < checked.count ? checked[i] : false
+        var attributes: UIMenuElement.Attributes = isEnabled ? [] : [.disabled]
+        var state: UIMenuElement.State = .off
+        if isChecked {
+          state = .on
+        }
+        let action = UIAction(title: title, image: image, attributes: attributes, state: state) { [weak self] _ in
           self?.channel.invokeMethod("itemSelected", arguments: ["index": i])
         }
         current.append(action)

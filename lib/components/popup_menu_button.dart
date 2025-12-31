@@ -16,7 +16,12 @@ abstract class CNPopupMenuEntry {
 /// A selectable item in a popup menu.
 class CNPopupMenuItem extends CNPopupMenuEntry {
   /// Creates a selectable popup menu item.
-  const CNPopupMenuItem({required this.label, this.icon, this.enabled = true});
+  const CNPopupMenuItem({
+    required this.label,
+    this.icon,
+    this.enabled = true,
+    this.checked = false,
+  });
 
   /// Display label for the item.
   final String label;
@@ -26,6 +31,9 @@ class CNPopupMenuItem extends CNPopupMenuEntry {
 
   /// Whether the item can be selected.
   final bool enabled;
+
+  /// Whether the item should display a check mark.
+  final bool checked;
 }
 
 /// A visual divider between popup menu items.
@@ -40,8 +48,26 @@ class CNPopupMenuDivider extends CNPopupMenuEntry {
 ///
 /// On iOS/macOS this embeds a native popup button and shows a native menu.
 class CNPopupMenuButton extends StatefulWidget {
-  /// Creates a text-labeled popup menu button.
+  /// Creates a popup menu button with a custom child widget.
+  ///
+  /// The entire area of the child widget will be clickable to open the menu.
+  /// A transparent native button overlay is used to handle menu interactions.
   const CNPopupMenuButton({
+    super.key,
+    required this.child,
+    required this.items,
+    required this.onSelected,
+    this.tint,
+  }) : buttonLabel = null,
+       buttonIcon = null,
+       width = null,
+       round = false,
+       height = null,
+       shrinkWrap = false,
+       buttonStyle = CNButtonStyle.plain;
+
+  /// Creates a text-labeled popup menu button.
+  const CNPopupMenuButton.label({
     super.key,
     required this.buttonLabel,
     required this.items,
@@ -50,7 +76,8 @@ class CNPopupMenuButton extends StatefulWidget {
     this.height = 32.0,
     this.shrinkWrap = false,
     this.buttonStyle = CNButtonStyle.plain,
-  }) : buttonIcon = null,
+  }) : child = null,
+       buttonIcon = null,
        width = null,
        round = false;
 
@@ -63,15 +90,19 @@ class CNPopupMenuButton extends StatefulWidget {
     this.tint,
     double size = 44.0, // button diameter (width = height)
     this.buttonStyle = CNButtonStyle.glass,
-  }) : buttonLabel = null,
+  }) : child = null,
+       buttonLabel = null,
        round = true,
        width = size,
        height = size,
        shrinkWrap = false,
        super();
 
-  /// Text for the button (null when using [buttonIcon]).
-  final String? buttonLabel; // null in icon mode
+  /// Custom child widget to display (non-null when using child constructor).
+  final Widget? child;
+
+  /// Text for the button (null when using [buttonIcon] or [child]).
+  final String? buttonLabel; // null in icon mode or child mode
   /// Icon for the button (non-null in icon mode).
   final CNSymbol? buttonIcon; // non-null in icon mode
   // Fixed size (width = height) when in icon mode.
@@ -89,8 +120,8 @@ class CNPopupMenuButton extends StatefulWidget {
   /// Tint color for the control.
   final Color? tint;
 
-  /// Control height; icon mode uses diameter semantics.
-  final double height;
+  /// Control height; icon mode uses diameter semantics. Null when using [child].
+  final double? height;
 
   /// If true, sizes the control to its intrinsic width.
   final bool shrinkWrap;
@@ -100,6 +131,9 @@ class CNPopupMenuButton extends StatefulWidget {
 
   /// Whether this instance is configured as an icon button variant.
   bool get isIconButton => buttonIcon != null;
+
+  /// Whether this instance uses a custom child widget.
+  bool get hasChild => child != null;
 
   @override
   State<CNPopupMenuButton> createState() => _CNPopupMenuButtonState();
@@ -145,6 +179,38 @@ class _CNPopupMenuButtonState extends State<CNPopupMenuButton> {
     if (!(defaultTargetPlatform == TargetPlatform.iOS ||
         defaultTargetPlatform == TargetPlatform.macOS)) {
       // Fallback Flutter implementation
+      if (widget.hasChild) {
+        return GestureDetector(
+          onTap: () async {
+            final selected = await showCupertinoModalPopup<int>(
+              context: context,
+              builder: (ctx) {
+                return CupertinoActionSheet(
+                  actions: [
+                    for (var i = 0; i < widget.items.length; i++)
+                      if (widget.items[i] is CNPopupMenuItem)
+                        CupertinoActionSheetAction(
+                          onPressed: () => Navigator.of(ctx).pop(i),
+                          child: Text(
+                            (widget.items[i] as CNPopupMenuItem).label,
+                          ),
+                        )
+                      else
+                        const SizedBox(height: 8),
+                  ],
+                  cancelButton: CupertinoActionSheetAction(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    isDefaultAction: true,
+                    child: const Text('Cancel'),
+                  ),
+                );
+              },
+            );
+            if (selected != null) widget.onSelected(selected);
+          },
+          child: widget.child,
+        );
+      }
       return SizedBox(
         height: widget.height,
         width: widget.isIconButton && widget.round
@@ -198,6 +264,7 @@ class _CNPopupMenuButtonState extends State<CNPopupMenuButton> {
     final symbols = <String>[];
     final isDivider = <bool>[];
     final enabled = <bool>[];
+    final checked = <bool>[];
     final sizes = <double?>[];
     final colors = <int?>[];
     final modes = <String?>[];
@@ -209,6 +276,7 @@ class _CNPopupMenuButtonState extends State<CNPopupMenuButton> {
         symbols.add('');
         isDivider.add(true);
         enabled.add(false);
+        checked.add(false);
         sizes.add(null);
         colors.add(null);
         modes.add(null);
@@ -219,6 +287,7 @@ class _CNPopupMenuButtonState extends State<CNPopupMenuButton> {
         symbols.add(e.icon?.name ?? '');
         isDivider.add(false);
         enabled.add(e.enabled);
+        checked.add(e.checked);
         sizes.add(e.icon?.size);
         colors.add(resolveColorToArgb(e.icon?.color, context));
         modes.add(e.icon?.mode?.name);
@@ -232,6 +301,7 @@ class _CNPopupMenuButtonState extends State<CNPopupMenuButton> {
     }
 
     final creationParams = <String, dynamic>{
+      if (widget.hasChild) 'transparentOverlay': true,
       if (widget.buttonLabel != null) 'buttonTitle': widget.buttonLabel,
       if (widget.buttonIcon != null) 'buttonIconName': widget.buttonIcon!.name,
       if (widget.buttonIcon?.size != null)
@@ -247,6 +317,7 @@ class _CNPopupMenuButtonState extends State<CNPopupMenuButton> {
       'sfSymbols': symbols,
       'isDivider': isDivider,
       'enabled': enabled,
+      'checked': checked,
       'sfSymbolSizes': sizes,
       'sfSymbolColors': colors,
       'sfSymbolRenderingModes': modes,
@@ -283,6 +354,41 @@ class _CNPopupMenuButtonState extends State<CNPopupMenuButton> {
               Factory<TapGestureRecognizer>(() => TapGestureRecognizer()),
             },
           );
+
+    // If using a child widget, stack it with a transparent platform view overlay
+    if (widget.hasChild) {
+      return Stack(
+        children: [
+          widget.child!,
+          Positioned.fill(
+            child: Listener(
+              onPointerDown: (e) {
+                _downPosition = e.position;
+                _setPressed(true);
+              },
+              onPointerMove: (e) {
+                final start = _downPosition;
+                if (start != null && _pressed) {
+                  final moved = (e.position - start).distance;
+                  if (moved > kTouchSlop) {
+                    _setPressed(false);
+                  }
+                }
+              },
+              onPointerUp: (_) {
+                _setPressed(false);
+                _downPosition = null;
+              },
+              onPointerCancel: (_) {
+                _setPressed(false);
+                _downPosition = null;
+              },
+              child: platformView,
+            ),
+          ),
+        ],
+      );
+    }
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -339,7 +445,7 @@ class _CNPopupMenuButtonState extends State<CNPopupMenuButton> {
     _lastIconSize = widget.buttonIcon?.size;
     _lastIconColor = resolveColorToArgb(widget.buttonIcon?.color, context);
     _lastStyle = widget.buttonStyle;
-    if (!widget.isIconButton) {
+    if (!widget.isIconButton && !widget.hasChild) {
       _requestIntrinsicSize();
     }
   }
@@ -373,6 +479,7 @@ class _CNPopupMenuButtonState extends State<CNPopupMenuButton> {
     final updSymbols = <String>[];
     final updIsDivider = <bool>[];
     final updEnabled = <bool>[];
+    final updChecked = <bool>[];
     final updSizes = <double?>[];
     final updColors = <int?>[];
     final updModes = <String?>[];
@@ -384,6 +491,7 @@ class _CNPopupMenuButtonState extends State<CNPopupMenuButton> {
         updSymbols.add('');
         updIsDivider.add(true);
         updEnabled.add(false);
+        updChecked.add(false);
         updSizes.add(null);
         updColors.add(null);
         updModes.add(null);
@@ -394,6 +502,7 @@ class _CNPopupMenuButtonState extends State<CNPopupMenuButton> {
         updSymbols.add(e.icon?.name ?? '');
         updIsDivider.add(false);
         updEnabled.add(e.enabled);
+        updChecked.add(e.checked);
         updSizes.add(e.icon?.size);
         updColors.add(resolveColorToArgb(e.icon?.color, context));
         updModes.add(e.icon?.mode?.name);
@@ -420,13 +529,15 @@ class _CNPopupMenuButtonState extends State<CNPopupMenuButton> {
       });
       _lastStyle = widget.buttonStyle;
     }
-    if (_lastTitle != widget.buttonLabel && widget.buttonLabel != null) {
+    if (_lastTitle != widget.buttonLabel &&
+        widget.buttonLabel != null &&
+        !widget.hasChild) {
       await ch.invokeMethod('setButtonTitle', {'title': widget.buttonLabel});
       _lastTitle = widget.buttonLabel;
       _requestIntrinsicSize();
     }
 
-    if (widget.isIconButton) {
+    if (widget.isIconButton && !widget.hasChild) {
       final iconName = preIconName;
       final iconSize = preIconSize;
       final iconColor = preIconColor;
@@ -464,6 +575,7 @@ class _CNPopupMenuButtonState extends State<CNPopupMenuButton> {
       'sfSymbols': updSymbols,
       'isDivider': updIsDivider,
       'enabled': updEnabled,
+      'checked': updChecked,
       'sfSymbolSizes': updSizes,
       'sfSymbolColors': updColors,
       'sfSymbolRenderingModes': updModes,

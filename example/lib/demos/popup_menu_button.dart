@@ -45,7 +45,7 @@ class _PopupMenuButtonDemoPageState extends State<PopupMenuButtonDemoPage> {
               children: [
                 Text('Text button'),
                 Spacer(),
-                CNPopupMenuButton(
+                CNPopupMenuButton.label(
                   buttonLabel: 'Actions',
                   items: items,
                   onSelected: (index) {
@@ -69,6 +69,74 @@ class _PopupMenuButtonDemoPageState extends State<PopupMenuButtonDemoPage> {
                     setState(() => _lastSelected = index);
                   },
                   buttonStyle: CNButtonStyle.glass,
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('Custom child'),
+                Spacer(),
+                CNPopupMenuButton(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: CupertinoColors.systemBlue,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(CupertinoIcons.add, color: CupertinoColors.white),
+                        SizedBox(width: 8),
+                        Text(
+                          'Custom Button',
+                          style: TextStyle(color: CupertinoColors.white),
+                        ),
+                      ],
+                    ),
+                  ),
+                  items: items,
+                  onSelected: (index) {
+                    setState(() => _lastSelected = index);
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('With check marks'),
+                Spacer(),
+                CNPopupMenuButton.label(
+                  buttonLabel: 'View Options',
+                  items: [
+                    CNPopupMenuItem(
+                      label: 'Show Grid',
+                      icon: const CNSymbol('square.grid.2x2', size: 18),
+                      checked: true,
+                    ),
+                    CNPopupMenuItem(
+                      label: 'Show List',
+                      icon: const CNSymbol('list.bullet', size: 18),
+                      checked: false,
+                    ),
+                    const CNPopupMenuDivider(),
+                    CNPopupMenuItem(
+                      label: 'Show Details',
+                      icon: const CNSymbol('info.circle', size: 18),
+                      checked: true,
+                    ),
+                  ],
+                  onSelected: (index) {
+                    setState(() => _lastSelected = index);
+                  },
+                  buttonStyle: CNButtonStyle.plain,
                 ),
               ],
             ),

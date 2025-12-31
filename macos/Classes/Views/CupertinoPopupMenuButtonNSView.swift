@@ -9,11 +9,13 @@ class CupertinoPopupMenuButtonNSView: NSView {
   private var symbols: [String] = []
   private var dividers: [Bool] = []
   private var enabled: [Bool] = []
+  private var checked: [Bool] = []
   private var defaultSizes: [NSNumber] = []
   private var defaultColors: [NSNumber] = []
   private var defaultModes: [String?] = []
   private var defaultPalettes: [[NSNumber]] = []
   private var defaultGradients: [NSNumber?] = []
+  private var isTransparentOverlay: Bool = false
 
   init(viewId: Int64, args: Any?, messenger: FlutterBinaryMessenger) {
     self.channel = FlutterMethodChannel(name: "CupertinoNativePopupMenuButton_\(viewId)", binaryMessenger: messenger)
@@ -32,12 +34,15 @@ class CupertinoPopupMenuButtonNSView: NSView {
     var symbols: [String] = []
     var dividers: [NSNumber] = []
     var enabled: [NSNumber] = []
+    var checkedNums: [NSNumber] = []
     var sizes: [NSNumber] = []
     var colors: [NSNumber] = []
     var buttonIconMode: String? = nil
     var buttonIconPalette: [NSNumber] = []
+    var transparentOverlay: Bool = false
 
     if let dict = args as? [String: Any] {
+      if let t = dict["transparentOverlay"] as? NSNumber { transparentOverlay = t.boolValue }
       if let t = dict["buttonTitle"] as? String { title = t }
       if let s = dict["buttonIconName"] as? String { iconName = s }
       if let s = dict["buttonIconSize"] as? NSNumber { iconSize = CGFloat(truncating: s) }
@@ -50,6 +55,7 @@ class CupertinoPopupMenuButtonNSView: NSView {
       symbols = (dict["sfSymbols"] as? [String]) ?? []
       dividers = (dict["isDivider"] as? [NSNumber]) ?? []
       enabled = (dict["enabled"] as? [NSNumber]) ?? []
+      checkedNums = (dict["checked"] as? [NSNumber]) ?? []
       if let modes = dict["sfSymbolRenderingModes"] as? [String?] { self.defaultModes = modes }
       if let palettes = dict["sfSymbolPaletteColors"] as? [[NSNumber]] { self.defaultPalettes = palettes }
       if let gradients = dict["sfSymbolGradientEnabled"] as? [NSNumber?] { self.defaultGradients = gradients }
@@ -59,12 +65,22 @@ class CupertinoPopupMenuButtonNSView: NSView {
       colors = (dict["sfSymbolColors"] as? [NSNumber]) ?? []
     }
 
+    self.isTransparentOverlay = transparentOverlay
+
     wantsLayer = true
     layer?.backgroundColor = NSColor.clear.cgColor
     appearance = NSAppearance(named: isDark ? .darkAqua : .aqua)
 
-    if let t = title { button.title = t }
-    if let name = iconName, var image = NSImage(systemSymbolName: name, accessibilityDescription: nil) {
+    // Make button transparent when in overlay mode
+    if transparentOverlay {
+      button.title = ""
+      button.image = nil
+      button.isBordered = false
+      button.bezelStyle = .texturedRounded
+      // NSButton doesn't have backgroundColor, but isBordered = false makes it transparent
+    } else {
+      if let t = title { button.title = t }
+      if let name = iconName, var image = NSImage(systemSymbolName: name, accessibilityDescription: nil) {
       if #available(macOS 12.0, *), let sz = iconSize {
         let cfg = NSImage.SymbolConfiguration(pointSize: sz, weight: .regular)
         image = image.withSymbolConfiguration(cfg) ?? image
@@ -93,8 +109,9 @@ class CupertinoPopupMenuButtonNSView: NSView {
       } else if let c = iconColor {
         image = image.tinted(with: c)
       }
-      button.image = image
-      button.imagePosition = .imageOnly
+        button.image = image
+        button.imagePosition = .imageOnly
+      }
     }
     // Map CNButtonStyle to AppKit bezel styles (best-effort)
     switch buttonStyle {
@@ -134,6 +151,7 @@ class CupertinoPopupMenuButtonNSView: NSView {
     self.symbols = symbols
     self.dividers = dividers.map { $0.boolValue }
     self.enabled = enabled.map { $0.boolValue }
+    self.checked = checkedNums.map { $0.boolValue }
     self.defaultSizes = sizes
     self.defaultColors = colors
     rebuildMenu(defaultSizes: sizes, defaultColors: colors)
@@ -153,6 +171,7 @@ class CupertinoPopupMenuButtonNSView: NSView {
           self.symbols = (args["sfSymbols"] as? [String]) ?? []
           self.dividers = ((args["isDivider"] as? [NSNumber]) ?? []).map { $0.boolValue }
           self.enabled = ((args["enabled"] as? [NSNumber]) ?? []).map { $0.boolValue }
+          self.checked = ((args["checked"] as? [NSNumber]) ?? []).map { $0.boolValue }
           self.defaultSizes = (args["sfSymbolSizes"] as? [NSNumber]) ?? []
           self.defaultColors = (args["sfSymbolColors"] as? [NSNumber]) ?? []
           self.defaultModes = (args["sfSymbolRenderingModes"] as? [String?]) ?? []
@@ -268,6 +287,7 @@ class CupertinoPopupMenuButtonNSView: NSView {
       mi.target = self
       mi.tag = i
       if i < enabled.count { mi.isEnabled = enabled[i] }
+      if i < checked.count { mi.state = checked[i] ? .on : .off }
       if i < symbols.count, !symbols[i].isEmpty {
         if var img = NSImage(systemSymbolName: symbols[i], accessibilityDescription: nil) {
           if #available(macOS 12.0, *), let sizes = defaultSizes, i < sizes.count {
