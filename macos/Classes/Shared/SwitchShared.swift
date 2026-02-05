@@ -1,7 +1,5 @@
 import SwiftUI
 
-import SwiftUI
-
 struct CupertinoSwitchView: View {
   @ObservedObject var model: SwitchModel
 
@@ -12,6 +10,7 @@ struct CupertinoSwitchView: View {
       .onChange(of: model.value) { newValue in
         model.onChange(newValue)
       }
+      .toggleStyle(.switch)
 
     if #available(macOS 12.0, *) {
       base.tint(model.tintColor)
