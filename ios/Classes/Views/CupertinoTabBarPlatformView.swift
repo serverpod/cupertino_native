@@ -62,7 +62,7 @@ class CupertinoTabBarPlatformView: NSObject, FlutterPlatformView, UITabBarDelega
       var items: [UITabBarItem] = []
       for i in range {
         var image: UIImage? = nil
-        if i < symbols.count { image = UIImage(systemName: symbols[i]) }
+        if i < symbols.count { image = UIImage(systemName: symbols[i]) ?? UIImage(named: symbols[i]) }
         let title = (i < labels.count) ? labels[i] : nil
         items.append(UITabBarItem(title: title, image: image, selectedImage: image))
       }
@@ -171,7 +171,7 @@ channel.setMethodCallHandler { [weak self] call, result in
             var items: [UITabBarItem] = []
             for i in range {
               var image: UIImage? = nil
-              if i < symbols.count { image = UIImage(systemName: symbols[i]) }
+              if i < symbols.count { image = UIImage(systemName: symbols[i]) ?? UIImage(named: symbols[i]) }
               let title = (i < labels.count) ? labels[i] : nil
               items.append(UITabBarItem(title: title, image: image, selectedImage: image))
             }
@@ -219,7 +219,7 @@ channel.setMethodCallHandler { [weak self] call, result in
             var items: [UITabBarItem] = []
             for i in range {
               var image: UIImage? = nil
-              if i < symbols.count { image = UIImage(systemName: symbols[i]) }
+              if i < symbols.count { image = UIImage(systemName: symbols[i]) ?? UIImage(named: symbols[i]) }
               let title = (i < labels.count) ? labels[i] : nil
               items.append(UITabBarItem(title: title, image: image, selectedImage: image))
             }
